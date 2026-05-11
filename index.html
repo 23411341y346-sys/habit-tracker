@@ -299,8 +299,30 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .cancel-btn {
+      display: none;
+      border: none; cursor: pointer;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #fce8e6;
+      color: #c62828;
+      transition: all .15s;
+    }
+    .cancel-btn:active { transform: scale(.95); }
+    .cancel-btn.visible { display: block; }
+
     /* ── Sending indicator on button ── */
-    .check-btn.sending { opacity: .6; cursor: wait; }
+    .check-btn.sending  { opacity: .6; cursor: wait; }
+    .cancel-btn.sending { opacity: .6; cursor: wait; }
   </style>
 </head>
 <body>
@@ -324,7 +346,10 @@
           <div class="habit-desc">每天一次</div>
         </div>
       </div>
-      <button class="check-btn eng" id="btn-eng" onclick="checkIn('eng')">打卡</button>
+      <div class="btn-group">
+        <button class="check-btn eng" id="btn-eng" onclick="checkIn('eng')">打卡</button>
+        <button class="cancel-btn" id="cancel-eng" onclick="cancelCheckIn('eng')">取消今日打卡</button>
+      </div>
     </div>
 
     <div class="habit-row">
@@ -335,7 +360,10 @@
           <div class="habit-desc">每週 4 天</div>
         </div>
       </div>
-      <button class="check-btn exe" id="btn-exe" onclick="checkIn('exe')">打卡</button>
+      <div class="btn-group">
+        <button class="check-btn exe" id="btn-exe" onclick="checkIn('exe')">打卡</button>
+        <button class="cancel-btn" id="cancel-exe" onclick="cancelCheckIn('exe')">取消今日打卡</button>
+      </div>
     </div>
   </div>
 
@@ -506,6 +534,49 @@ function setLoading(on) {
 }
 
 // ═══════════════════════════════════════════════
+//  CANCEL CHECK-IN
+// ═══════════════════════════════════════════════
+async function cancelCheckIn(habit) {
+  const todayKey = dateKey(today);
+  if (!habitData[habit].has(todayKey)) return;
+  if (sending[habit]) return;
+
+  sending[habit] = true;
+  const cancel = document.getElementById('cancel-' + habit);
+  cancel.textContent = '取消中…';
+  cancel.classList.add('sending');
+
+  // 樂觀更新
+  habitData[habit].delete(todayKey);
+
+  try {
+    const body = {
+      date:  todayKey,
+      habit: HABIT_API[habit],
+      done:  false
+    };
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    showToast(habit === 'eng' ? '📖 念英文打卡已取消' : '🏃 運動打卡已取消');
+  } catch (err) {
+    console.error('取消失敗', err);
+    habitData[habit].add(todayKey); // 回滾
+    showToast('⚠️ 取消失敗，請再試一次', true);
+  } finally {
+    sending[habit] = false;
+    cancel.textContent = '取消今日打卡';
+    cancel.classList.remove('sending');
+    renderAll();
+  }
+}
+
+// ═══════════════════════════════════════════════
 //  RENDER
 // ═══════════════════════════════════════════════
 function renderAll() {
@@ -524,13 +595,16 @@ function renderHeader() {
 function renderTodayButtons() {
   const todayKey = dateKey(today);
   ['eng', 'exe'].forEach(h => {
-    const btn = document.getElementById('btn-' + h);
+    const btn    = document.getElementById('btn-' + h);
+    const cancel = document.getElementById('cancel-' + h);
     if (habitData[h].has(todayKey)) {
       btn.textContent = '✓ 完成';
       btn.className = 'check-btn done';
+      cancel.classList.add('visible');
     } else {
       btn.textContent = '打卡';
       btn.className = `check-btn ${h}`;
+      cancel.classList.remove('visible');
     }
   });
 }
