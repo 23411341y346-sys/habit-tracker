@@ -463,12 +463,24 @@ async function loadData() {
   setLoading(true);
   try {
     const res = await fetch(API_URL, { redirect: 'follow' });
+    console.log('[loadData] response.status:', res.status);
+    console.log('[loadData] response.url:', res.url);
+
+    const rawText = await res.text();
+    console.log('[loadData] response.text() 原始內容:', rawText);
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const records = await res.json();
+
+    let records;
+    try {
+      records = JSON.parse(rawText);
+    } catch (parseErr) {
+      throw new Error('JSON 解析失敗: ' + parseErr.message);
+    }
 
     const todayKey = dateKey(today);
     console.log('[loadData] 今天日期:', todayKey);
-    console.log('[loadData] 原始資料:', JSON.stringify(records, null, 2));
+    console.log('[loadData] 原始資料 (parsed):', JSON.stringify(records, null, 2));
 
     const todayRecords = records.filter(r => r.date === todayKey);
     console.log('[loadData] 今日紀錄:', JSON.stringify(todayRecords, null, 2));
