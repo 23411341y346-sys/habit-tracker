@@ -466,13 +466,19 @@ async function loadData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const records = await res.json();
 
-    // 預期格式：[{ date: "2026-05-11", habit: "english", done: true }, ...]
+    // 用 Map 以「date|habit」為 key，後出現的紀錄覆蓋前面的（取最新狀態）
+    const stateMap = new Map();
+    for (const r of records) {
+      stateMap.set(`${r.date}|${r.habit}`, r.done === true || r.done === 'TRUE');
+    }
+
     habitData.eng.clear();
     habitData.exe.clear();
-    for (const r of records) {
-      if (!r.done) continue;
-      if (r.habit === 'english')  habitData.eng.add(r.date);
-      if (r.habit === 'exercise') habitData.exe.add(r.date);
+    for (const [key, done] of stateMap) {
+      if (!done) continue;
+      const [date, habit] = key.split('|');
+      if (habit === 'english')  habitData.eng.add(date);
+      if (habit === 'exercise') habitData.exe.add(date);
     }
     renderAll();
   } catch (err) {
