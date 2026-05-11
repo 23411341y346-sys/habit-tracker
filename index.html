@@ -425,7 +425,7 @@
 // ═══════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbyOb9pbkZpZFAL9SmuQIWmV7d0IERhJserKaSD4dfY2h8DRYh9gvbCR46HQgFt_ng3l/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzurNTfr1RGXjK40hMgZEGGKqKtjZVFTBe7b33YYWovOAZy105Uu477uClRdP0g96kS/exec';
 
 // habit 名稱對應（本地 key ↔ API 欄位值）
 const HABIT_API = { eng: 'english', exe: 'exercise' };
@@ -466,6 +466,13 @@ async function loadData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const records = await res.json();
 
+    const todayKey = dateKey(today);
+    console.log('[loadData] 今天日期:', todayKey);
+    console.log('[loadData] 原始資料:', JSON.stringify(records, null, 2));
+
+    const todayRecords = records.filter(r => r.date === todayKey);
+    console.log('[loadData] 今日紀錄:', JSON.stringify(todayRecords, null, 2));
+
     // 用 Map 以「date|habit」為 key，後出現的紀錄覆蓋前面的（取最新狀態）
     const stateMap = new Map();
     for (const r of records) {
@@ -480,6 +487,9 @@ async function loadData() {
       if (habit === 'english')  habitData.eng.add(date);
       if (habit === 'exercise') habitData.exe.add(date);
     }
+
+    console.log('[loadData] 念英文已打卡日期:', [...habitData.eng]);
+    console.log('[loadData] 運動已打卡日期:', [...habitData.exe]);
     renderAll();
   } catch (err) {
     console.error('載入資料失敗', err);
