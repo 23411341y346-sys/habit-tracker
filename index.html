@@ -211,8 +211,9 @@
       font-size: 11px;
       color: var(--sub);
     }
-    .legend-item { display: flex; align-items: center; gap: 4px; }
-    .legend-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-item  { display: flex; align-items: center; gap: 4px; }
+    .legend-dot   { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-count { font-weight: 600; color: var(--text); margin-left: 2px; }
 
     /* ── Calendar grid ── */
     .cal-weekdays {
@@ -435,7 +436,8 @@ function buildStaticHTML() {
     const legend = group.habits.map(key => {
       const c = HABIT_CONFIG[key];
       return `<div class="legend-item">
-        <span class="legend-dot" style="background:${c.done}"></span>${c.name}
+        <span class="legend-dot" style="background:${c.done}"></span>
+        ${c.name}<span class="legend-count" id="lcount-${key}">–</span>
       </div>`;
     }).join('');
     return `
@@ -713,6 +715,20 @@ function pieSvg(states, colorPairs, size = 22) {
 }
 
 // ═══════════════════════════════════════════════
+//  CALENDAR HELPERS
+// ═══════════════════════════════════════════════
+
+// 計算某習慣在「當月」（今天所在的月份）的完成天數
+function getMonthCount(habitKey) {
+  const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  let count = 0;
+  for (const d of habitData[habitKey]) {
+    if (d.startsWith(yyyymm)) count++;
+  }
+  return count;
+}
+
+// ═══════════════════════════════════════════════
 //  CALENDAR RENDER
 // ═══════════════════════════════════════════════
 function renderCalendar() {
@@ -755,6 +771,12 @@ function renderCalendar() {
       cell.innerHTML = `<span class="day-num">${d}</span>` + pieSvg(states, colorPairs);
       gridEl.appendChild(cell);
     }
+
+    // 更新圖例的本月累積天數
+    group.habits.forEach(hk => {
+      const el = document.getElementById('lcount-' + hk);
+      if (el) el.textContent = getMonthCount(hk) + ' 日';
+    });
   });
 }
 
