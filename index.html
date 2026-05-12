@@ -187,16 +187,20 @@
 
     .cal-legend {
       display: flex;
-      gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 12px;
-      font-size: 0.75rem;
+      gap: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 11px;
       color: var(--sub);
     }
-    .cal-legend span { display: flex; align-items: center; gap: 5px; }
-    .legend-swatch {
-      width: 12px; height: 12px;
-      border-radius: 3px;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
@@ -216,35 +220,26 @@
       gap: 4px;
     }
 
-    .cal-cell {
+    /* ── Calendar cells（圓餅圖版） ── */
+    .month-day {
       aspect-ratio: 1;
-      border-radius: 8px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
-      font-weight: 500;
+      gap: 2px;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 3px;
+    }
+    .month-day.today  { outline: 1.5px solid var(--text); }
+    .month-day.future { opacity: 0.35; }
+    .cal-blank        { aspect-ratio: 1; }
+    .day-num {
+      font-size: 10px;
       color: var(--sub);
-      position: relative;
+      line-height: 1;
     }
-    .cal-cell.in-month { color: var(--text); }
-    .cal-cell.today-cell { font-weight: 700; }
-    .cal-cell.today-cell::after {
-      content: '';
-      position: absolute;
-      bottom: 3px;
-      width: 4px; height: 4px;
-      border-radius: 50%;
-      background: var(--text);
-    }
-
-    /* 完成度色階（依完成幾個習慣） */
-    .cal-cell.done-1 { background: #c8e6c9; }
-    .cal-cell.done-2 { background: #81c784; }
-    .cal-cell.done-3 { background: #43a047; color: white; }
-    .cal-cell.done-4 { background: #1b5e20; color: white; }
-    .cal-cell.done-3.today-cell::after,
-    .cal-cell.done-4.today-cell::after { background: white; }
 
     /* ── Bottom spacing ── */
     .spacer { height: 24px; }
@@ -349,8 +344,8 @@ const HABITS = [
     name:  '英文-閱讀',
     desc:  '每天 20 分鐘',
     goal:  7,
-    color: '#4f8ef7',
-    colorLight: '#e8f0fe',
+    color: '#85B7EB',
+    colorLight: '#E6F1FB',
   },
   {
     key:   'listening',
@@ -359,8 +354,8 @@ const HABITS = [
     name:  '英文-聽力',
     desc:  '每天 20 分鐘',
     goal:  7,
-    color: '#9c27b0',
-    colorLight: '#f3e5f5',
+    color: '#5DCAA5',
+    colorLight: '#E1F5EE',
   },
   {
     key:   'writing',
@@ -369,8 +364,8 @@ const HABITS = [
     name:  '英文-寫作',
     desc:  '每天 20 分鐘',
     goal:  7,
-    color: '#f57c00',
-    colorLight: '#fff3e0',
+    color: '#ED93B1',
+    colorLight: '#FBEAF0',
   },
   {
     key:   'exe',
@@ -379,8 +374,8 @@ const HABITS = [
     name:  '運動',
     desc:  '每週 4 天',
     goal:  4,
-    color: '#34a853',
-    colorLight: '#e6f4ea',
+    color: '#EF9F27',
+    colorLight: '#FAEEDA',
   },
 ];
 
@@ -457,14 +452,13 @@ function buildStaticHTML() {
     </div>
   `).join('');
 
-  // Calendar legend
+  // Calendar legend — 對應圓餅圖四個扇形
   const legendEl = document.getElementById('cal-legend');
-  legendEl.innerHTML = `
-    <span><span class="legend-swatch" style="background:#c8e6c9"></span>1 項完成</span>
-    <span><span class="legend-swatch" style="background:#81c784"></span>2 項</span>
-    <span><span class="legend-swatch" style="background:#43a047"></span>3 項</span>
-    <span><span class="legend-swatch" style="background:#1b5e20"></span>全部完成</span>
-  `;
+  legendEl.innerHTML = HABITS.map(h => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${h.color}"></span>${h.name}
+    </div>
+  `).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -676,6 +670,37 @@ function renderWeek() {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  PIE CHART HELPERS
+// ═══════════════════════════════════════════════
+
+// 回傳當日四個習慣的完成狀態陣列（順序與 HABITS 一致）
+function getDayStates(dateStr) {
+  return HABITS.map(h => habitData[h.key].has(dateStr));
+}
+
+// 繪製 22×22 四等份圓餅 SVG
+// states = [reading, listening, writing, exe]，每個值是 boolean
+function renderPieSvg(states) {
+  const cx = 11, cy = 11, r = 9;
+  // 從頂端順時針：上(reading)→右(listening)→下(writing)→左(exe)
+  const degAngles = [-90, 0, 90, 180, 270];
+  const rad = degAngles.map(a => a * Math.PI / 180);
+
+  let paths = '';
+  for (let i = 0; i < 4; i++) {
+    const x1 = +(cx + r * Math.cos(rad[i])).toFixed(2);
+    const y1 = +(cy + r * Math.sin(rad[i])).toFixed(2);
+    const x2 = +(cx + r * Math.cos(rad[i + 1])).toFixed(2);
+    const y2 = +(cy + r * Math.sin(rad[i + 1])).toFixed(2);
+    const fill = states[i] ? HABITS[i].color : HABITS[i].colorLight;
+    // large-arc=0（四分之一弧），sweep=1（順時針）
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z" fill="${fill}"/>`;
+  }
+
+  return `<svg width="22" height="22" viewBox="0 0 22 22" style="display:block;flex-shrink:0">${paths}</svg>`;
+}
+
 function renderCalendar() {
   document.getElementById('cal-title').textContent =
     `${calYear} 年 ${calMonth + 1} 月`;
@@ -687,29 +712,31 @@ function renderCalendar() {
   const days     = new Date(calYear, calMonth + 1, 0).getDate();
   const todayKey = dateKey(today);
 
-  for (let i = 0; i < first; i++) grid.appendChild(blankCell());
+  // 空白補位
+  for (let i = 0; i < first; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'cal-blank';
+    grid.appendChild(blank);
+  }
 
   for (let d = 1; d <= days; d++) {
-    const dt  = new Date(calYear, calMonth, d);
-    const key = dateKey(dt);
-
-    // 算出當天完成了幾個習慣
-    const count = HABITS.filter(h => habitData[h.key].has(key)).length;
-    const isToday = key === todayKey;
+    const dt       = new Date(calYear, calMonth, d);
+    const key      = dateKey(dt);
+    const isToday  = key === todayKey;
+    const isFuture = dt > today;
+    const states   = getDayStates(key);
 
     const cell = document.createElement('div');
-    cell.className = 'cal-cell in-month' +
-      (count > 0 ? ` done-${count}` : '') +
-      (isToday ? ' today-cell' : '');
-    cell.textContent = d;
+    cell.className = 'month-day' +
+      (isToday  ? ' today'  : '') +
+      (isFuture ? ' future' : '');
+
+    cell.innerHTML =
+      `<span class="day-num">${d}</span>` +
+      renderPieSvg(states);
+
     grid.appendChild(cell);
   }
-}
-
-function blankCell() {
-  const el = document.createElement('div');
-  el.className = 'cal-cell';
-  return el;
 }
 
 function changeMonth(dir) {
