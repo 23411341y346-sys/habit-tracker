@@ -6,14 +6,10 @@
   <title>習慣追蹤</title>
   <style>
     :root {
-      --eng: #4f8ef7;
-      --eng-light: #e8f0fe;
-      --exe: #34a853;
-      --exe-light: #e6f4ea;
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --text: #202124;
-      --sub: #5f6368;
+      --bg:     #f5f7fa;
+      --card:   #ffffff;
+      --text:   #202124;
+      --sub:    #5f6368;
       --border: #e0e0e0;
       --radius: 16px;
     }
@@ -32,7 +28,6 @@
       color: white;
       padding: 20px 20px 28px;
     }
-
     header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
     header p  { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
 
@@ -46,7 +41,6 @@
       margin-bottom: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,.06);
     }
-
     .card-title {
       font-size: 0.78rem;
       font-weight: 600;
@@ -73,12 +67,19 @@
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.2rem;
+      flex-shrink: 0;
     }
-    .habit-icon.eng { background: var(--eng-light); }
-    .habit-icon.exe { background: var(--exe-light); }
 
     .habit-name  { font-weight: 600; font-size: 0.95rem; }
     .habit-desc  { font-size: 0.78rem; color: var(--sub); margin-top: 2px; }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
 
     .check-btn {
       border: none; cursor: pointer;
@@ -87,11 +88,32 @@
       font-size: 0.85rem;
       font-weight: 600;
       transition: all .15s;
+      white-space: nowrap;
     }
-    .check-btn.eng  { background: var(--eng-light); color: var(--eng); }
-    .check-btn.exe  { background: var(--exe-light); color: var(--exe); }
-    .check-btn.done { background: #e8f5e9; color: #2e7d32; cursor: default; }
-    .check-btn:active { transform: scale(.95); }
+    .check-btn.done {
+      background: #e8f5e9;
+      color: #2e7d32;
+      cursor: default;
+    }
+    .check-btn:not(.done):active { transform: scale(.95); }
+
+    .cancel-btn {
+      display: none;
+      border: none; cursor: pointer;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #fce8e6;
+      color: #c62828;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .cancel-btn:active  { transform: scale(.95); }
+    .cancel-btn.visible { display: block; }
+
+    .check-btn.sending  { opacity: .6; cursor: wait; }
+    .cancel-btn.sending { opacity: .6; cursor: wait; }
 
     /* ── Week progress ── */
     .week-grid {
@@ -100,7 +122,6 @@
       gap: 18px;
     }
 
-    .week-habit { }
     .week-label {
       font-size: 0.82rem;
       font-weight: 600;
@@ -113,14 +134,10 @@
       width: 8px; height: 8px;
       border-radius: 50%;
       display: inline-block;
+      flex-shrink: 0;
     }
-    .dot.eng { background: var(--eng); }
-    .dot.exe { background: var(--exe); }
 
-    .week-days {
-      display: flex;
-      gap: 5px;
-    }
+    .week-days { display: flex; gap: 5px; }
 
     .day-bubble {
       width: 32px; height: 32px;
@@ -130,19 +147,13 @@
       font-weight: 600;
       background: #f0f0f0;
       color: var(--sub);
+      flex-shrink: 0;
     }
-    .day-bubble.done.eng { background: var(--eng); color: white; }
-    .day-bubble.done.exe { background: var(--exe); color: white; }
-    .day-bubble.today    { box-shadow: 0 0 0 2px var(--text); }
+    .day-bubble.today { box-shadow: 0 0 0 2px var(--text); }
 
-    .week-stat {
-      font-size: 0.78rem;
-      color: var(--sub);
-      margin-top: 8px;
-    }
+    .week-stat { font-size: 0.78rem; color: var(--sub); margin-top: 8px; }
     .week-stat strong { color: var(--text); }
 
-    /* ── Progress bar ── */
     .prog-bar-wrap {
       background: #f0f0f0;
       border-radius: 99px;
@@ -155,8 +166,6 @@
       border-radius: 99px;
       transition: width .4s ease;
     }
-    .prog-bar-fill.eng { background: var(--eng); }
-    .prog-bar-fill.exe { background: var(--exe); }
 
     /* ── Calendar ── */
     .cal-header {
@@ -178,19 +187,18 @@
 
     .cal-legend {
       display: flex;
-      gap: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
       margin-bottom: 12px;
       font-size: 0.75rem;
       color: var(--sub);
     }
     .cal-legend span { display: flex; align-items: center; gap: 5px; }
-    .legend-dot {
-      width: 10px; height: 10px;
+    .legend-swatch {
+      width: 12px; height: 12px;
       border-radius: 3px;
+      flex-shrink: 0;
     }
-    .legend-dot.eng { background: var(--eng); }
-    .legend-dot.exe { background: var(--exe); }
-    .legend-dot.both { background: linear-gradient(135deg, var(--eng) 50%, var(--exe) 50%); }
 
     .cal-weekdays {
       display: grid;
@@ -212,20 +220,15 @@
       aspect-ratio: 1;
       border-radius: 8px;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-size: 0.8rem;
       font-weight: 500;
       color: var(--sub);
-      background: transparent;
       position: relative;
     }
     .cal-cell.in-month { color: var(--text); }
-    .cal-cell.today-cell {
-      font-weight: 700;
-      color: var(--text);
-    }
+    .cal-cell.today-cell { font-weight: 700; }
     .cal-cell.today-cell::after {
       content: '';
       position: absolute;
@@ -235,26 +238,13 @@
       background: var(--text);
     }
 
-    .cal-dots {
-      display: flex;
-      gap: 2px;
-      position: absolute;
-      top: 4px;
-      right: 4px;
-    }
-    .cal-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-    }
-    .cal-dot.eng { background: var(--eng); }
-    .cal-dot.exe { background: var(--exe); }
-
-    /* badge under number */
-    .cal-cell.has-eng   { background: var(--eng-light); }
-    .cal-cell.has-exe   { background: var(--exe-light); }
-    .cal-cell.has-both  {
-      background: linear-gradient(135deg, var(--eng-light) 50%, var(--exe-light) 50%);
-    }
+    /* 完成度色階（依完成幾個習慣） */
+    .cal-cell.done-1 { background: #c8e6c9; }
+    .cal-cell.done-2 { background: #81c784; }
+    .cal-cell.done-3 { background: #43a047; color: white; }
+    .cal-cell.done-4 { background: #1b5e20; color: white; }
+    .cal-cell.done-3.today-cell::after,
+    .cal-cell.done-4.today-cell::after { background: white; }
 
     /* ── Bottom spacing ── */
     .spacer { height: 24px; }
@@ -293,36 +283,11 @@
     .spinner {
       width: 36px; height: 36px;
       border: 3px solid var(--border);
-      border-top-color: var(--eng);
+      border-top-color: #4f8ef7;
       border-radius: 50%;
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .btn-group {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-    }
-
-    .cancel-btn {
-      display: none;
-      border: none; cursor: pointer;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      background: #fce8e6;
-      color: #c62828;
-      transition: all .15s;
-    }
-    .cancel-btn:active { transform: scale(.95); }
-    .cancel-btn.visible { display: block; }
-
-    /* ── Sending indicator on button ── */
-    .check-btn.sending  { opacity: .6; cursor: wait; }
-    .cancel-btn.sending { opacity: .6; cursor: wait; }
   </style>
 </head>
 <body>
@@ -337,60 +302,13 @@
   <!-- Today -->
   <div class="card">
     <div class="card-title">今日打卡</div>
-
-    <div class="habit-row">
-      <div class="habit-info">
-        <div class="habit-icon eng">📖</div>
-        <div>
-          <div class="habit-name">念英文</div>
-          <div class="habit-desc">每天一次</div>
-        </div>
-      </div>
-      <div class="btn-group">
-        <button class="check-btn eng" id="btn-eng" onclick="checkIn('eng')">打卡</button>
-        <button class="cancel-btn" id="cancel-eng" onclick="cancelCheckIn('eng')">取消今日打卡</button>
-      </div>
-    </div>
-
-    <div class="habit-row">
-      <div class="habit-info">
-        <div class="habit-icon exe">🏃</div>
-        <div>
-          <div class="habit-name">運動</div>
-          <div class="habit-desc">每週 4 天</div>
-        </div>
-      </div>
-      <div class="btn-group">
-        <button class="check-btn exe" id="btn-exe" onclick="checkIn('exe')">打卡</button>
-        <button class="cancel-btn" id="cancel-exe" onclick="cancelCheckIn('exe')">取消今日打卡</button>
-      </div>
-    </div>
+    <div id="today-rows"></div>
   </div>
 
   <!-- Week Progress -->
   <div class="card">
     <div class="card-title">本週進度</div>
-    <div class="week-grid">
-
-      <div class="week-habit">
-        <div class="week-label"><span class="dot eng"></span>念英文</div>
-        <div class="week-days" id="week-eng"></div>
-        <div class="week-stat" id="stat-eng"></div>
-        <div class="prog-bar-wrap">
-          <div class="prog-bar-fill eng" id="bar-eng"></div>
-        </div>
-      </div>
-
-      <div class="week-habit">
-        <div class="week-label"><span class="dot exe"></span>運動</div>
-        <div class="week-days" id="week-exe"></div>
-        <div class="week-stat" id="stat-exe"></div>
-        <div class="prog-bar-wrap">
-          <div class="prog-bar-fill exe" id="bar-exe"></div>
-        </div>
-      </div>
-
-    </div>
+    <div class="week-grid" id="week-grid"></div>
   </div>
 
   <!-- Calendar -->
@@ -400,11 +318,7 @@
       <h3 id="cal-title"></h3>
       <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
     </div>
-    <div class="cal-legend">
-      <span><span class="legend-dot eng"></span>念英文</span>
-      <span><span class="legend-dot exe"></span>運動</span>
-      <span><span class="legend-dot both"></span>兩者</span>
-    </div>
+    <div class="cal-legend" id="cal-legend"></div>
     <div class="cal-weekdays">
       <div>日</div><div>一</div><div>二</div><div>三</div>
       <div>四</div><div>五</div><div>六</div>
@@ -427,8 +341,48 @@
 // ═══════════════════════════════════════════════
 const API_URL = 'https://script.google.com/macros/s/AKfycbzurNTfr1RGXjK40hMgZEGGKqKtjZVFTBe7b33YYWovOAZy105Uu477uClRdP0g96kS/exec';
 
-// habit 名稱對應（本地 key ↔ API 欄位值）
-const HABIT_API = { eng: 'english', exe: 'exercise' };
+const HABITS = [
+  {
+    key:   'reading',
+    api:   'english-reading',
+    icon:  '📖',
+    name:  '英文-閱讀',
+    desc:  '每天 20 分鐘',
+    goal:  7,
+    color: '#4f8ef7',
+    colorLight: '#e8f0fe',
+  },
+  {
+    key:   'listening',
+    api:   'english-listening',
+    icon:  '🎧',
+    name:  '英文-聽力',
+    desc:  '每天 20 分鐘',
+    goal:  7,
+    color: '#9c27b0',
+    colorLight: '#f3e5f5',
+  },
+  {
+    key:   'writing',
+    api:   'english-writing',
+    icon:  '✍️',
+    name:  '英文-寫作',
+    desc:  '每天 20 分鐘',
+    goal:  7,
+    color: '#f57c00',
+    colorLight: '#fff3e0',
+  },
+  {
+    key:   'exe',
+    api:   'exercise',
+    icon:  '🏃',
+    name:  '運動',
+    desc:  '每週 4 天',
+    goal:  4,
+    color: '#34a853',
+    colorLight: '#e6f4ea',
+  },
+];
 
 // ═══════════════════════════════════════════════
 //  STATE
@@ -436,28 +390,85 @@ const HABIT_API = { eng: 'english', exe: 'exercise' };
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
-// 儲存所有已打卡日期的 Set
-const habitData = { eng: new Set(), exe: new Set() };
+// key → Set<dateString>
+const habitData = Object.fromEntries(HABITS.map(h => [h.key, new Set()]));
 
 let calYear  = today.getFullYear();
 let calMonth = today.getMonth();
 
 // 防止重複送出
-const sending = { eng: false, exe: false };
+const sending = Object.fromEntries(HABITS.map(h => [h.key, false]));
 
 // ═══════════════════════════════════════════════
 //  UTILS
 // ═══════════════════════════════════════════════
 function dateKey(d) {
-  // 用本地時間避免時區偏移造成日期跑掉
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
 }
 
+function habitByKey(key) {
+  return HABITS.find(h => h.key === key);
+}
+
 // ═══════════════════════════════════════════════
-//  API — GET 讀取歷史資料
+//  STATIC HTML BUILDERS（一次性）
+// ═══════════════════════════════════════════════
+function buildStaticHTML() {
+  // Today rows
+  const rowsEl = document.getElementById('today-rows');
+  rowsEl.innerHTML = HABITS.map(h => `
+    <div class="habit-row" id="row-${h.key}">
+      <div class="habit-info">
+        <div class="habit-icon"
+             style="background:${h.colorLight}">${h.icon}</div>
+        <div>
+          <div class="habit-name">${h.name}</div>
+          <div class="habit-desc">${h.desc}</div>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="check-btn"
+                id="btn-${h.key}"
+                style="background:${h.colorLight};color:${h.color}"
+                onclick="checkIn('${h.key}')">打卡</button>
+        <button class="cancel-btn"
+                id="cancel-${h.key}"
+                onclick="cancelCheckIn('${h.key}')">取消今日打卡</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Week grid rows
+  const weekEl = document.getElementById('week-grid');
+  weekEl.innerHTML = HABITS.map(h => `
+    <div class="week-habit">
+      <div class="week-label">
+        <span class="dot" style="background:${h.color}"></span>${h.name}
+      </div>
+      <div class="week-days" id="week-${h.key}"></div>
+      <div class="week-stat" id="stat-${h.key}"></div>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar-fill" id="bar-${h.key}"
+             style="background:${h.color};width:0%"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // Calendar legend
+  const legendEl = document.getElementById('cal-legend');
+  legendEl.innerHTML = `
+    <span><span class="legend-swatch" style="background:#c8e6c9"></span>1 項完成</span>
+    <span><span class="legend-swatch" style="background:#81c784"></span>2 項</span>
+    <span><span class="legend-swatch" style="background:#43a047"></span>3 項</span>
+    <span><span class="legend-swatch" style="background:#1b5e20"></span>全部完成</span>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+//  API — GET
 // ═══════════════════════════════════════════════
 async function loadData() {
   setLoading(true);
@@ -485,28 +496,30 @@ async function loadData() {
     const todayRecords = records.filter(r => r.date === todayKey);
     console.log('[loadData] 今日紀錄:', JSON.stringify(todayRecords, null, 2));
 
-    // 用 Map 以「date|habit」為 key，後出現的紀錄覆蓋前面的（取最新狀態）
+    // 以 "date|api_habit" 為 key，後出現的覆蓋前面（取最新狀態）
     const stateMap = new Map();
     for (const r of records) {
       stateMap.set(`${r.date}|${r.habit}`, r.done === true || r.done === 'TRUE');
     }
 
-    habitData.eng.clear();
-    habitData.exe.clear();
-    for (const [key, done] of stateMap) {
+    // 清空再填入
+    HABITS.forEach(h => habitData[h.key].clear());
+    for (const [mapKey, done] of stateMap) {
       if (!done) continue;
-      const [date, habit] = key.split('|');
-      if (habit === 'english')  habitData.eng.add(date);
-      if (habit === 'exercise') habitData.exe.add(date);
+      const [date, apiHabit] = mapKey.split('|');
+      const h = HABITS.find(x => x.api === apiHabit);
+      if (h) habitData[h.key].add(date);
     }
 
-    console.log('[loadData] 念英文已打卡日期:', [...habitData.eng]);
-    console.log('[loadData] 運動已打卡日期:', [...habitData.exe]);
+    HABITS.forEach(h => {
+      console.log(`[loadData] ${h.name} 已打卡日期:`, [...habitData[h.key]]);
+    });
+
     renderAll();
   } catch (err) {
     console.error('載入資料失敗', err);
     showToast('⚠️ 載入資料失敗，請重新整理', true);
-    renderAll(); // 仍然渲染空白狀態
+    renderAll();
   } finally {
     setLoading(false);
   }
@@ -515,41 +528,69 @@ async function loadData() {
 // ═══════════════════════════════════════════════
 //  API — POST 打卡
 // ═══════════════════════════════════════════════
-async function checkIn(habit) {
+async function checkIn(key) {
+  const h = habitByKey(key);
   const todayKey = dateKey(today);
-  if (habitData[habit].has(todayKey)) return; // 已打卡
-  if (sending[habit]) return;                  // 送出中
+  if (habitData[key].has(todayKey)) return;
+  if (sending[key]) return;
 
-  sending[habit] = true;
-  const btn = document.getElementById('btn-' + habit);
+  sending[key] = true;
+  const btn = document.getElementById('btn-' + key);
   btn.textContent = '傳送中…';
   btn.classList.add('sending');
-
-  // 樂觀更新：先在本地記錄，讓 UI 立即反映
-  habitData[habit].add(todayKey);
+  habitData[key].add(todayKey); // 樂觀更新
 
   try {
-    const body = {
-      date:  todayKey,
-      habit: HABIT_API[habit],
-      done:  true
-    };
     const res = await fetch(API_URL, {
       method:   'POST',
       redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' }, // GAS 需用 text/plain 避免 preflight
-      body:     JSON.stringify(body)
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ date: todayKey, habit: h.api, done: true }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    showToast(habit === 'eng' ? '📖 念英文打卡成功！' : '🏃 運動打卡成功！');
+    showToast(`${h.icon} ${h.name} 打卡成功！`);
   } catch (err) {
     console.error('打卡失敗', err);
-    // 回滾樂觀更新
-    habitData[habit].delete(todayKey);
+    habitData[key].delete(todayKey);
     showToast('⚠️ 打卡失敗，請再試一次', true);
   } finally {
-    sending[habit] = false;
+    sending[key] = false;
+    renderAll();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  API — POST 取消打卡
+// ═══════════════════════════════════════════════
+async function cancelCheckIn(key) {
+  const h = habitByKey(key);
+  const todayKey = dateKey(today);
+  if (!habitData[key].has(todayKey)) return;
+  if (sending[key]) return;
+
+  sending[key] = true;
+  const cancelBtn = document.getElementById('cancel-' + key);
+  cancelBtn.textContent = '取消中…';
+  cancelBtn.classList.add('sending');
+  habitData[key].delete(todayKey); // 樂觀更新
+
+  try {
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ date: todayKey, habit: h.api, done: false }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast(`${h.icon} ${h.name} 打卡已取消`);
+  } catch (err) {
+    console.error('取消失敗', err);
+    habitData[key].add(todayKey);
+    showToast('⚠️ 取消失敗，請再試一次', true);
+  } finally {
+    sending[key] = false;
+    cancelBtn.textContent = '取消今日打卡';
+    cancelBtn.classList.remove('sending');
     renderAll();
   }
 }
@@ -559,49 +600,6 @@ async function checkIn(habit) {
 // ═══════════════════════════════════════════════
 function setLoading(on) {
   document.getElementById('loading-mask').classList.toggle('hidden', !on);
-}
-
-// ═══════════════════════════════════════════════
-//  CANCEL CHECK-IN
-// ═══════════════════════════════════════════════
-async function cancelCheckIn(habit) {
-  const todayKey = dateKey(today);
-  if (!habitData[habit].has(todayKey)) return;
-  if (sending[habit]) return;
-
-  sending[habit] = true;
-  const cancel = document.getElementById('cancel-' + habit);
-  cancel.textContent = '取消中…';
-  cancel.classList.add('sending');
-
-  // 樂觀更新
-  habitData[habit].delete(todayKey);
-
-  try {
-    const body = {
-      date:  todayKey,
-      habit: HABIT_API[habit],
-      done:  false
-    };
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    showToast(habit === 'eng' ? '📖 念英文打卡已取消' : '🏃 運動打卡已取消');
-  } catch (err) {
-    console.error('取消失敗', err);
-    habitData[habit].add(todayKey); // 回滾
-    showToast('⚠️ 取消失敗，請再試一次', true);
-  } finally {
-    sending[habit] = false;
-    cancel.textContent = '取消今日打卡';
-    cancel.classList.remove('sending');
-    renderAll();
-  }
 }
 
 // ═══════════════════════════════════════════════
@@ -622,16 +620,18 @@ function renderHeader() {
 
 function renderTodayButtons() {
   const todayKey = dateKey(today);
-  ['eng', 'exe'].forEach(h => {
-    const btn    = document.getElementById('btn-' + h);
-    const cancel = document.getElementById('cancel-' + h);
-    if (habitData[h].has(todayKey)) {
+  HABITS.forEach(h => {
+    const btn    = document.getElementById('btn-' + h.key);
+    const cancel = document.getElementById('cancel-' + h.key);
+    if (habitData[h.key].has(todayKey)) {
       btn.textContent = '✓ 完成';
-      btn.className = 'check-btn done';
+      btn.className   = 'check-btn done';
       cancel.classList.add('visible');
     } else {
       btn.textContent = '打卡';
-      btn.className = `check-btn ${h}`;
+      btn.className   = 'check-btn';
+      btn.style.background = h.colorLight;
+      btn.style.color      = h.color;
       cancel.classList.remove('visible');
     }
   });
@@ -639,37 +639,40 @@ function renderTodayButtons() {
 
 function renderWeek() {
   const DAY_NAMES = ['日','一','二','三','四','五','六'];
-  const dow = today.getDay();
+  const dow    = today.getDay();
   const monday = new Date(today);
   monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
 
-  ['eng', 'exe'].forEach(h => {
-    const wrap = document.getElementById('week-' + h);
+  HABITS.forEach(h => {
+    const wrap = document.getElementById('week-' + h.key);
     wrap.innerHTML = '';
     let count = 0;
+
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const key = dateKey(d);
-      const done = habitData[h].has(key);
+      const key    = dateKey(d);
+      const done   = habitData[h.key].has(key);
       const isToday = key === dateKey(today);
-      const future = d > today;
-      if (done) count++;
+      const future  = d > today;
+      if (done && !future) count++;
 
       const el = document.createElement('div');
-      el.className = 'day-bubble' +
-        (done && !future ? ' done ' + h : '') +
-        (isToday ? ' today' : '');
+      el.className = 'day-bubble' + (isToday ? ' today' : '');
       el.textContent = DAY_NAMES[d.getDay()];
+
+      if (done && !future) {
+        el.style.background = h.color;
+        el.style.color = 'white';
+      }
       if (future) el.style.opacity = '0.3';
       wrap.appendChild(el);
     }
 
-    const goal = h === 'eng' ? 7 : 4;
-    const pct  = Math.min(100, Math.round(count / goal * 100));
-    document.getElementById('stat-' + h).innerHTML =
-      `<strong>${count}</strong> / ${goal} 天`;
-    document.getElementById('bar-' + h).style.width = pct + '%';
+    const pct = Math.min(100, Math.round(count / h.goal * 100));
+    document.getElementById('stat-' + h.key).innerHTML =
+      `<strong>${count}</strong> / ${h.goal} 天`;
+    document.getElementById('bar-' + h.key).style.width = pct + '%';
   });
 }
 
@@ -687,17 +690,16 @@ function renderCalendar() {
   for (let i = 0; i < first; i++) grid.appendChild(blankCell());
 
   for (let d = 1; d <= days; d++) {
-    const dt     = new Date(calYear, calMonth, d);
-    const key    = dateKey(dt);
-    const hasEng = habitData.eng.has(key);
-    const hasExe = habitData.exe.has(key);
+    const dt  = new Date(calYear, calMonth, d);
+    const key = dateKey(dt);
+
+    // 算出當天完成了幾個習慣
+    const count = HABITS.filter(h => habitData[h.key].has(key)).length;
     const isToday = key === todayKey;
 
     const cell = document.createElement('div');
     cell.className = 'cal-cell in-month' +
-      (hasEng && hasExe ? ' has-both' :
-       hasEng ? ' has-eng' :
-       hasExe ? ' has-exe' : '') +
+      (count > 0 ? ` done-${count}` : '') +
       (isToday ? ' today-cell' : '');
     cell.textContent = d;
     grid.appendChild(cell);
@@ -733,6 +735,7 @@ function showToast(msg, isError = false) {
 // ═══════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════
+buildStaticHTML();
 renderHeader();
 loadData();
 </script>
