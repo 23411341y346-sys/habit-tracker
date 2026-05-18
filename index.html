@@ -58,38 +58,66 @@
     .habit-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 8px;
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
     }
     .habit-row:last-child { border-bottom: none; }
 
-    .habit-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-
-    .habit-icon {
-      width: 38px; height: 38px;
-      border-radius: 11px;
+    .habit-icon-wrap {
+      width: 32px; height: 32px;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1rem;
       flex-shrink: 0;
     }
-    .habit-name { font-weight: 600; font-size: 0.92rem; }
-    .habit-desc { font-size: 0.76rem; color: var(--sub); margin-top: 1px; }
+    .habit-info { flex: 1; min-width: 0; }
+    .habit-name   { font-size: 0.88rem; font-weight: 600; line-height: 1.2; }
+    .habit-target { font-size: 0.7rem; color: var(--sub); margin-top: 2px; }
 
-    .toggle-btn {
+    .backfill-btn {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--sub);
+      font-size: 0.7rem;
+      cursor: pointer;
+      line-height: 1.3;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .backfill-btn.backfilled {
+      background: var(--bg);
+      border-color: #bbb;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .backfill-btn.disabled {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--sub);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .backfill-btn.sending { opacity: .5; cursor: wait; }
+
+    .checkin-btn {
+      flex: 0 0 auto;
+      padding: 7px 13px;
+      border-radius: 9px;
       border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 14px;
+      background: var(--bg);
+      color: var(--sub);
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       transition: all .15s;
-      flex-shrink: 0;
-      margin-left: 8px;
     }
-    .toggle-btn:active:not(.sending) { transform: scale(.95); }
-    .toggle-btn.sending { opacity: .6; cursor: wait; }
+    .checkin-btn:active:not(.sending) { transform: scale(.95); }
+    .checkin-btn.sending { opacity: .6; cursor: wait; }
 
     /* ── Group pager (shared) ── */
     .group-pager-wrap {
@@ -339,13 +367,13 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbzurNTfr1RGXjK40hMgZEGGKqKtjZVFTBe7b33YYWovOAZy105Uu477uClRdP0g96kS/exec';
 
 const HABIT_CONFIG = {
-  'english-reading':   { name: '英文-閱讀', icon: 'ti-book',       done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', desc: '每天 20 分鐘',    goal: 7 },
-  'english-listening': { name: '英文-聽力', icon: 'ti-headphones', done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', desc: '每天 20 分鐘',    goal: 7 },
-  'english-writing':   { name: '英文-寫作', icon: 'ti-pencil',     done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', desc: '每天 20 分鐘',    goal: 7 },
-  'healthy-diet':      { name: '健康飲食',  icon: 'ti-apple',      done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', desc: '每天',           goal: 7 },
-  'exercise':          { name: '運動',      icon: 'ti-run',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', desc: '每週 4 天',      goal: 4 },
-  'reading':           { name: '閱讀',      icon: 'ti-book-2',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', desc: '每天 15 分鐘',    goal: 7 },
-  'web-dev':           { name: '網站建設',  icon: 'ti-code',       done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', desc: '每週累積 30 分鐘', goal: 4 },
+  'english-reading':   { name: '英文-閱讀', icon: 'ti-book',       done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', target: '每天 20 分鐘',    goal: 7 },
+  'english-listening': { name: '英文-聽力', icon: 'ti-headphones', done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', target: '每天 20 分鐘',    goal: 7 },
+  'english-writing':   { name: '英文-寫作', icon: 'ti-pencil',     done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', target: '每天 20 分鐘',    goal: 7 },
+  'healthy-diet':      { name: '健康飲食',  icon: 'ti-apple',      done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', target: '每天',           goal: 7 },
+  'exercise':          { name: '運動',      icon: 'ti-run',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', target: '每週 4 天',      goal: 4 },
+  'reading':           { name: '閱讀',      icon: 'ti-book-2',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', target: '每天 15 分鐘',    goal: 7 },
+  'web-dev':           { name: '網站建設',  icon: 'ti-code',       done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', target: '每週累積 30 分鐘', goal: 4 },
 };
 
 const GROUPS = {
@@ -363,8 +391,10 @@ const GROUP_KEYS = Object.keys(GROUPS);
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
-const habitData = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
-const sending   = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+const habitData       = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
+const backfilledDates = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
+const sending         = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+const sendingBackfill = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
 
 let calYear  = today.getFullYear();
 let calMonth = today.getMonth();
@@ -389,16 +419,16 @@ function buildStaticHTML() {
     const c = HABIT_CONFIG[key];
     return `
       <div class="habit-row">
-        <div class="habit-info">
-          <div class="habit-icon" style="background:${c.empty}">
-            <i class="ti ${c.icon}" style="color:${c.done}"></i>
-          </div>
-          <div>
-            <div class="habit-name">${c.name}</div>
-            <div class="habit-desc">${c.desc}</div>
-          </div>
+        <div class="habit-icon-wrap" style="background:${c.empty};color:${c.textColor}">
+          <i class="ti ${c.icon}" aria-hidden="true"></i>
         </div>
-        <button class="toggle-btn" id="btn-${key}"
+        <div class="habit-info">
+          <div class="habit-name">${c.name}</div>
+          <div class="habit-target">${c.target}</div>
+        </div>
+        <button class="backfill-btn" id="backfill-btn-${key}"
+                onclick="toggleBackfill('${key}')">前一天補打</button>
+        <button class="checkin-btn" id="checkin-btn-${key}"
                 onclick="toggleCheckIn('${key}')">打卡</button>
       </div>`;
   }).join('');
@@ -538,16 +568,21 @@ async function loadData() {
     // 後出現的紀錄覆蓋前面（取最新狀態）
     const stateMap = new Map();
     for (const r of records) {
-      stateMap.set(`${r.date}|${r.habit}`, r.done === true || r.done === 'TRUE');
+      const done       = r.done       === true || r.done       === 'TRUE';
+      const backfilled = r.backfilled === true || r.backfilled === 'TRUE';
+      stateMap.set(`${r.date}|${r.habit}`, { done, backfilled });
     }
 
-    HABIT_KEYS.forEach(k => habitData[k].clear());
-    for (const [mapKey, done] of stateMap) {
+    HABIT_KEYS.forEach(k => { habitData[k].clear(); backfilledDates[k].clear(); });
+    for (const [mapKey, { done, backfilled }] of stateMap) {
       if (!done) continue;
       const idx   = mapKey.indexOf('|');
       const date  = mapKey.slice(0, idx);
       const habit = mapKey.slice(idx + 1);
-      if (habitData[habit] !== undefined) habitData[habit].add(date);
+      if (habitData[habit] !== undefined) {
+        habitData[habit].add(date);
+        if (backfilled) backfilledDates[habit].add(date);
+      }
     }
 
     HABIT_KEYS.forEach(k =>
@@ -560,6 +595,77 @@ async function loadData() {
     renderAll();
   } finally {
     setLoading(false);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  YESTERDAY KEY
+// ═══════════════════════════════════════════════
+function yesterdayKey() {
+  const y = new Date(today);
+  y.setDate(y.getDate() - 1);
+  return dateKey(y);
+}
+
+// ═══════════════════════════════════════════════
+//  BACKFILL STATE
+// ═══════════════════════════════════════════════
+function getBackfillState(key) {
+  const yKey = yesterdayKey();
+  if (!habitData[key].has(yKey))      return 'can-backfill';
+  if (backfilledDates[key].has(yKey)) return 'backfilled';
+  return 'already-done';
+}
+
+// ═══════════════════════════════════════════════
+//  API — POST 補打切換
+// ═══════════════════════════════════════════════
+async function toggleBackfill(key) {
+  const yKey  = yesterdayKey();
+  const state = getBackfillState(key);
+  if (state === 'already-done' || sendingBackfill[key]) return;
+
+  sendingBackfill[key] = true;
+  const btn = document.getElementById('backfill-btn-' + key);
+  if (btn) btn.classList.add('sending');
+
+  const newDone = state === 'can-backfill';
+
+  // 樂觀更新
+  if (newDone) {
+    habitData[key].add(yKey);
+    backfilledDates[key].add(yKey);
+  } else {
+    habitData[key].delete(yKey);
+    backfilledDates[key].delete(yKey);
+  }
+  renderAll();
+
+  try {
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ date: yKey, habit: key, done: newDone, backfilled: newDone }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const c = HABIT_CONFIG[key];
+    showToast(newDone ? `✓ ${c.name} 補打成功！` : `${c.name} 補打已取消`);
+  } catch (err) {
+    console.error('補打失敗', err);
+    // 回滾
+    if (newDone) {
+      habitData[key].delete(yKey);
+      backfilledDates[key].delete(yKey);
+    } else {
+      habitData[key].add(yKey);
+      backfilledDates[key].add(yKey);
+    }
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  } finally {
+    sendingBackfill[key] = false;
+    if (btn) btn.classList.remove('sending');
+    renderAll();
   }
 }
 
@@ -577,7 +683,7 @@ async function toggleCheckIn(key) {
   if (wasDone) habitData[key].delete(todayKey);
   else         habitData[key].add(todayKey);
 
-  const btn = document.getElementById('btn-' + key);
+  const btn = document.getElementById('checkin-btn-' + key);
   btn.classList.add('sending');
   renderTodayButtons();
 
@@ -586,7 +692,7 @@ async function toggleCheckIn(key) {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone }),
+      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone, backfilled: false }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const c = HABIT_CONFIG[key];
@@ -640,18 +746,39 @@ function renderHeader() {
 function renderTodayButtons() {
   const todayKey = dateKey(today);
   HABIT_KEYS.forEach(key => {
-    const c   = HABIT_CONFIG[key];
-    const btn = document.getElementById('btn-' + key);
-    if (!btn) return;
-    const done = habitData[key].has(todayKey);
-    if (done) {
-      btn.textContent = '✓ 完成';
-      btn.style.cssText =
-        `background:${c.empty};border-color:${c.done};color:${c.textColor}`;
+    const c = HABIT_CONFIG[key];
+
+    // ── 打卡按鈕 ──
+    const checkinBtn = document.getElementById('checkin-btn-' + key);
+    if (checkinBtn) {
+      const done = habitData[key].has(todayKey);
+      if (done) {
+        checkinBtn.textContent = '✓ 完成';
+        checkinBtn.style.cssText =
+          `background:${c.empty};border-color:${c.done};color:${c.textColor}`;
+      } else {
+        checkinBtn.textContent = '打卡';
+        checkinBtn.style.cssText =
+          'background:var(--bg);border-color:var(--border);color:var(--sub)';
+      }
+    }
+
+    // ── 補打按鈕 ──
+    const backfillBtn = document.getElementById('backfill-btn-' + key);
+    if (!backfillBtn) return;
+    const bfState = getBackfillState(key);
+    backfillBtn.className = 'backfill-btn';
+    if (bfState === 'backfilled') {
+      backfillBtn.textContent = '✓ 已補打';
+      backfillBtn.classList.add('backfilled');
+      backfillBtn.disabled = false;
+    } else if (bfState === 'already-done') {
+      backfillBtn.textContent = '前一天已打';
+      backfillBtn.classList.add('disabled');
+      backfillBtn.disabled = true;
     } else {
-      btn.textContent = '打卡';
-      btn.style.cssText =
-        'background:#f5f7fa;border-color:#e0e0e0;color:#5f6368';
+      backfillBtn.textContent = '前一天補打';
+      backfillBtn.disabled = false;
     }
   });
 }
