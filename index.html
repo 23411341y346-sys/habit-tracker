@@ -310,6 +310,19 @@
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Today group section labels ── */
+    .group-section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #888;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0 0 6px 4px;
+      margin-top: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .group-section-label:first-of-type { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -380,9 +393,9 @@ const HABIT_CONFIG = {
 };
 
 const GROUPS = {
-  english:  { name: '英文', habits: ['english-reading', 'english-listening', 'english-writing'] },
-  health:   { name: '健康', habits: ['healthy-diet', 'exercise', 'dental-floss', 'skincare', 'water-intake'] },
-  learning: { name: '學習', habits: ['reading', 'web-dev'] },
+  english:  { name: '母語溝通者', habits: ['english-reading', 'english-listening', 'english-writing'] },
+  health:   { name: '塑造者',     habits: ['healthy-diet', 'exercise', 'dental-floss', 'skincare', 'water-intake'] },
+  learning: { name: '佈局者',     habits: ['reading', 'web-dev'] },
 };
 
 const HABIT_KEYS = Object.keys(HABIT_CONFIG);
@@ -417,23 +430,27 @@ function dateKey(d) {
 // ═══════════════════════════════════════════════
 function buildStaticHTML() {
 
-  // ── Today rows ──
-  document.getElementById('today-rows').innerHTML = HABIT_KEYS.map(key => {
-    const c = HABIT_CONFIG[key];
-    return `
-      <div class="habit-row">
-        <div class="habit-icon-wrap" style="background:${c.empty};color:${c.textColor}">
-          <i class="ti ${c.icon}" aria-hidden="true"></i>
-        </div>
-        <div class="habit-info">
-          <div class="habit-name">${c.name}</div>
-          <div class="habit-target">${c.target}</div>
-        </div>
-        <button class="backfill-btn" id="backfill-btn-${key}"
-                onclick="toggleBackfill('${key}')">前一天補打</button>
-        <button class="checkin-btn" id="checkin-btn-${key}"
-                onclick="toggleCheckIn('${key}')">打卡</button>
-      </div>`;
+  // ── Today rows（依群組分區）──
+  document.getElementById('today-rows').innerHTML = GROUP_KEYS.map(gKey => {
+    const group = GROUPS[gKey];
+    const rows  = group.habits.map(key => {
+      const c = HABIT_CONFIG[key];
+      return `
+        <div class="habit-row">
+          <div class="habit-icon-wrap" style="background:${c.empty};color:${c.textColor}">
+            <i class="ti ${c.icon}" aria-hidden="true"></i>
+          </div>
+          <div class="habit-info">
+            <div class="habit-name">${c.name}</div>
+            <div class="habit-target">${c.target}</div>
+          </div>
+          <button class="backfill-btn" id="backfill-btn-${key}"
+                  onclick="toggleBackfill('${key}')">前一天補打</button>
+          <button class="checkin-btn" id="checkin-btn-${key}"
+                  onclick="toggleCheckIn('${key}')">打卡</button>
+        </div>`;
+    }).join('');
+    return `<div class="group-section-label">${group.name}</div>${rows}`;
   }).join('');
 
   // ── Week pager pages ──
