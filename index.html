@@ -389,6 +389,8 @@ const HABIT_CONFIG = {
   'skincare':          { name: '臉部保養', icon: 'ti-sparkles',   done: '#D97BBF', empty: '#FDE8F5', textColor: '#6B1256', target: '每天',           goal: 7 },
   'water-intake':      { name: '喝水2000cc', icon: 'ti-droplet',  done: '#4FC3E8', empty: '#DFF4FB', textColor: '#0A4A63', target: '每天',           goal: 7 },
   'blue-light':        { name: '睡前藍光',  icon: 'ti-moon',     done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', target: '每天',           goal: 7 },
+  'relax':             { name: '放鬆',      icon: 'ti-mood-smile', done: '#80CBC4', empty: '#E0F2F1', textColor: '#00514B', target: '每天',           goal: 7 },
+  'less-phone':        { name: '少用手機',  icon: 'ti-phone-off',  done: '#EF9A9A', empty: '#FDECEA', textColor: '#7F1D1D', target: '每天',           goal: 7 },
   'reading':           { name: '閱讀',      icon: 'ti-book-2',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', target: '每天 15 分鐘',    goal: 7 },
   'web-dev':           { name: '網站建設',  icon: 'ti-code',       done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', target: '每週累積 30 分鐘', goal: 4 },
   'wealth-mindset':    { name: '財富思維',  icon: 'ti-coin',       done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00', target: '每天 15 分鐘',    goal: 7 },
@@ -397,7 +399,8 @@ const HABIT_CONFIG = {
 
 const GROUPS = {
   english:  { name: '母語溝通者', habits: ['english-reading', 'english-listening', 'english-writing'] },
-  health:   { name: '塑造者',     habits: ['healthy-diet', 'exercise', 'dental-floss', 'skincare', 'water-intake', 'blue-light'] },
+  health:   { name: '塑造者',     habits: ['exercise', 'dental-floss', 'skincare', 'water-intake'] },
+  life:     { name: '熱愛生命者', habits: ['healthy-diet', 'blue-light', 'relax', 'less-phone'] },
   learning: { name: '佈局者',     habits: ['reading', 'web-dev', 'wealth-mindset', 'maritime-law'] },
 };
 
