@@ -874,9 +874,9 @@ function pieSvg(states, colorPairs, size = 22) {
 //  CALENDAR HELPERS
 // ═══════════════════════════════════════════════
 
-// 計算某習慣在「當月」（今天所在的月份）的完成天數
-function getMonthCount(habitKey) {
-  const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+// 計算某習慣在指定年月的完成天數
+function getMonthCount(habitKey, year, month) {
+  const yyyymm = `${year}-${String(month + 1).padStart(2, '0')}`;
   let count = 0;
   for (const d of habitData[habitKey]) {
     if (d.startsWith(yyyymm)) count++;
@@ -931,7 +931,7 @@ function renderCalendar() {
     // 更新圖例的本月累積天數
     group.habits.forEach(hk => {
       const el = document.getElementById('lcount-' + hk);
-      if (el) el.textContent = getMonthCount(hk) + ' 日';
+      if (el) el.textContent = getMonthCount(hk, calYear, calMonth) + ' 日';
     });
   });
 }
