@@ -323,6 +323,80 @@
       border-bottom: 1px solid #eee;
     }
     .group-section-label:first-of-type { margin-top: 0; }
+
+    /* ── Tab bar ── */
+    #tab-bar {
+      display: flex;
+      border-bottom: 0.5px solid #eee;
+      background: var(--card);
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 14px;
+      color: #aaa;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+    }
+    .tab.active { color: #111; font-weight: 500; border-bottom: 2px solid #111; }
+
+    /* ── Monthly view ── */
+    #monthly-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0 10px;
+    }
+    #monthly-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    #monthly-nav button:disabled { opacity: 0.35; cursor: default; }
+    #monthly-nav span { font-size: 0.95rem; font-weight: 700; }
+
+    .monthly-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .monthly-row:last-child { border-bottom: none; }
+    .monthly-row .icon-box {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .monthly-row .result      { font-size: 0.72rem; color: var(--sub); margin-top: 2px; }
+    .monthly-row .result.done { color: #388e3c; font-weight: 500; }
+    .monthly-row .btn {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    .monthly-row .readonly {
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      color: var(--sub);
+      margin-left: auto;
+    }
   </style>
 </head>
 <body>
@@ -332,6 +406,12 @@
   <p id="header-date"></p>
 </header>
 
+<div id="tab-bar">
+  <button id="tab-daily"   class="tab active" onclick="switchTab('daily')">每日</button>
+  <button id="tab-monthly" class="tab"        onclick="switchTab('monthly')">每月</button>
+</div>
+
+<div id="view-daily">
 <div class="container">
 
   <!-- TODAY CHECK-IN -->
@@ -354,9 +434,9 @@
     <div class="cal-header-row">
       <span class="card-title" style="margin:0">本月月曆</span>
       <div class="cal-month-nav">
-        <button class="cal-nav" onclick="changeMonth(-1)">&#8249;</button>
+        <button class="cal-nav" onclick="changeCalMonth(-1)">&#8249;</button>
         <span id="cal-title"></span>
-        <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
+        <button class="cal-nav" onclick="changeCalMonth(1)">&#8250;</button>
       </div>
     </div>
     <div class="group-pager-wrap" id="cal-wrap">
@@ -367,6 +447,19 @@
 
   <div class="spacer"></div>
 </div>
+</div><!-- /view-daily -->
+
+<div id="view-monthly" style="display:none">
+  <div class="container">
+    <div id="monthly-nav">
+      <button onclick="changeMonth(-1)">‹ 上個月</button>
+      <span id="monthly-label"></span>
+      <button onclick="changeMonth(1)" id="next-month-btn" disabled>下個月 ›</button>
+    </div>
+    <div id="monthly-content"></div>
+    <div class="spacer"></div>
+  </div>
+</div><!-- /view-monthly -->
 
 <div class="loading-mask" id="loading-mask">
   <div class="spinner"></div>
@@ -408,6 +501,24 @@ const GROUPS = {
 const HABIT_KEYS = Object.keys(HABIT_CONFIG);
 const GROUP_KEYS = Object.keys(GROUPS);
 
+const MONTHLY_CONFIG = {
+  'towel':            { name: '浴巾',             icon: 'ti-wash',          done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C' },
+  'razor':            { name: '刮鬍刀',           icon: 'ti-razor',         done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92' },
+  'bathroom':         { name: '浴室',             icon: 'ti-bath',          done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041' },
+  'jacket':           { name: '外套',             icon: 'ti-hanger',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806' },
+  'bedsheet':         { name: '被單、床單',       icon: 'ti-bed',           done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E' },
+  'supplement-check': { name: '盤點保健食品',     icon: 'ti-pill',          done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92' },
+  'accounting':       { name: '記帳',             icon: 'ti-receipt',       done: '#97C459', empty: '#EAF3DE', textColor: '#27500A' },
+  'diary':            { name: '日記',             icon: 'ti-notebook',      done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00' },
+  'backup':           { name: '備份硬碟',         icon: 'ti-device-floppy', done: '#5BB8D4', empty: '#E0F4F9', textColor: '#0D4A5E' },
+  'weight':           { name: '檢視體重',         icon: 'ti-scale',         done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C' },
+  'habit-review':     { name: '每日習慣實行程度', icon: 'ti-chart-bar',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73' },
+};
+const MONTHLY_GROUPS = {
+  clean: { name: '清潔', items: ['towel', 'razor', 'bathroom', 'jacket', 'bedsheet'] },
+  other: { name: '其他', items: ['supplement-check', 'accounting', 'diary', 'backup', 'weight', 'habit-review'] },
+};
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -418,6 +529,7 @@ const habitData       = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const backfilledDates = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const sending         = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
 const sendingBackfill = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+let allRecords = [];
 
 let calYear  = today.getFullYear();
 let calMonth = today.getMonth();
@@ -592,12 +704,20 @@ async function loadData() {
     console.log('[loadData] today records:',
       JSON.stringify(records.filter(r => r.date === todayKey), null, 2));
 
-    // 後出現的紀錄覆蓋前面（取最新狀態）
+    // 正規化所有記錄，供每月視圖查詢
+    allRecords = records.map(r => ({
+      date:       r.date,
+      habit:      r.habit,
+      done:       r.done       === true || r.done       === 'TRUE',
+      backfilled: r.backfilled === true || r.backfilled === 'TRUE',
+      type:       r.type || 'daily',
+    }));
+
+    // 後出現的紀錄覆蓋前面（取最新狀態），只處理每日記錄
     const stateMap = new Map();
-    for (const r of records) {
-      const done       = r.done       === true || r.done       === 'TRUE';
-      const backfilled = r.backfilled === true || r.backfilled === 'TRUE';
-      stateMap.set(`${r.date}|${r.habit}`, { done, backfilled });
+    for (const r of allRecords) {
+      if (r.type === 'monthly') continue;
+      stateMap.set(`${r.date}|${r.habit}`, { done: r.done, backfilled: r.backfilled });
     }
 
     HABIT_KEYS.forEach(k => { habitData[k].clear(); backfilledDates[k].clear(); });
@@ -673,7 +793,7 @@ async function toggleBackfill(key) {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: yKey, habit: key, done: newDone, backfilled: newDone }),
+      body:     JSON.stringify({ date: yKey, habit: key, done: newDone, backfilled: newDone, type: 'daily' }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const c = HABIT_CONFIG[key];
@@ -719,7 +839,7 @@ async function toggleCheckIn(key) {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone, backfilled: false }),
+      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone, backfilled: false, type: 'daily' }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const c = HABIT_CONFIG[key];
@@ -762,6 +882,7 @@ function renderAll() {
   renderTodayButtons();
   renderWeek();
   renderCalendar();
+  renderMonthlyView();
 }
 
 function renderHeader() {
@@ -937,11 +1058,131 @@ function renderCalendar() {
   });
 }
 
-function changeMonth(dir) {
+function changeCalMonth(dir) {
   calMonth += dir;
   if (calMonth < 0)  { calMonth = 11; calYear--; }
   if (calMonth > 11) { calMonth = 0;  calYear++; }
   renderCalendar();
+}
+
+// ═══════════════════════════════════════════════
+//  SHARED SAVE / RELOAD
+// ═══════════════════════════════════════════════
+function getTodayString() { return dateKey(today); }
+
+async function saveCheckin(date, habit, done, backfilled = false, type = 'daily') {
+  const res = await fetch(API_URL, {
+    method:   'POST',
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain' },
+    body:     JSON.stringify({ date, habit, done, backfilled, type }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+async function loadDataAndRender() { await loadData(); }
+
+// ═══════════════════════════════════════════════
+//  TAB SWITCH
+// ═══════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('tab-daily').classList.toggle('active',   tab === 'daily');
+  document.getElementById('tab-monthly').classList.toggle('active', tab === 'monthly');
+  document.getElementById('view-daily').style.display   = tab === 'daily'   ? 'block' : 'none';
+  document.getElementById('view-monthly').style.display = tab === 'monthly' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════
+//  MONTHLY VIEW
+// ═══════════════════════════════════════════════
+let currentMonthOffset = 0;
+
+function changeMonth(delta) {
+  currentMonthOffset += delta;
+  if (currentMonthOffset > 0) currentMonthOffset = 0;
+  const nextBtn = document.getElementById('next-month-btn');
+  if (nextBtn) nextBtn.disabled = currentMonthOffset === 0;
+  renderMonthlyView();
+}
+
+function getMonthKey(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function renderMonthlyView() {
+  const el = document.getElementById('monthly-content');
+  if (!el) return;
+
+  const key            = getMonthKey(currentMonthOffset);
+  const isCurrentMonth = currentMonthOffset === 0;
+  const [y, m]         = key.split('-');
+  document.getElementById('monthly-label').textContent = y + ' 年 ' + parseInt(m) + ' 月';
+
+  // 後出現的記錄覆蓋前面，取最新狀態
+  const monthlyState = {};
+  allRecords
+    .filter(r => r.type === 'monthly' && r.date.startsWith(key))
+    .forEach(r => { monthlyState[r.habit] = r; });
+
+  let html = '';
+  Object.entries(MONTHLY_GROUPS).forEach(([, group]) => {
+    html += '<div class="group-section-label">' + group.name + '</div>';
+    group.items.forEach(itemKey => {
+      const item   = MONTHLY_CONFIG[itemKey];
+      const record = monthlyState[itemKey];
+      const isDone = record ? record.done : false;
+      const dateDisplay = (isDone && record)
+        ? record.date.slice(5).replace('-', ' 月 ').replace(/^0(\d)/, '$1') + ' 日完成'
+        : '本月尚未完成';
+
+      html += '<div class="monthly-row">';
+      html += '<div class="icon-box" style="background:' + item.empty + '">' +
+              '<i class="ti ' + item.icon + '" style="font-size:18px;color:' + item.textColor + '" aria-hidden="true"></i></div>';
+      html += '<div class="habit-info">' +
+              '<div class="habit-name">' + item.name + '</div>' +
+              '<div class="result ' + (isDone ? 'done' : 'undone') + '">' + dateDisplay + '</div>' +
+              '</div>';
+      if (isCurrentMonth) {
+        if (isDone) {
+          html += '<button class="btn done" ' +
+                  'style="background:' + item.empty + ';color:' + item.textColor + ';border-color:' + item.done + '" ' +
+                  'onclick="cancelMonthly(\'' + itemKey + '\')">✓ 完成</button>';
+        } else {
+          html += '<button class="btn" onclick="checkinMonthly(\'' + itemKey + '\')">打卡</button>';
+        }
+      } else {
+        html += '<span class="readonly">唯讀</span>';
+      }
+      html += '</div>';
+    });
+  });
+  el.innerHTML = html;
+}
+
+async function checkinMonthly(habitKey) {
+  try {
+    await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
+    showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 完成！');
+    await loadDataAndRender();
+  } catch (err) {
+    console.error('每月打卡失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  }
+}
+
+async function cancelMonthly(habitKey) {
+  try {
+    await saveCheckin(getTodayString(), habitKey, false, false, 'monthly');
+    showToast(MONTHLY_CONFIG[habitKey].name + ' 已取消');
+    await loadDataAndRender();
+  } catch (err) {
+    console.error('取消失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  }
 }
 
 // ═══════════════════════════════════════════════
