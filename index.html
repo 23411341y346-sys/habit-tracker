@@ -496,22 +496,6 @@
     <div class="dot-row" id="cal-dots"></div>
   </div>
 
-  <!-- MONTHLY ITEMS -->
-  <div class="card">
-    <div class="cal-header-row">
-      <span class="card-title" style="margin:0">每月事項</span>
-      <div class="cal-month-nav">
-        <button class="cal-nav" onclick="changeMonth(-1)">&#8249;</button>
-        <span id="monthly-title"></span>
-        <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
-      </div>
-    </div>
-    <div class="group-pager-wrap" id="monthly-wrap">
-      <div class="group-pager" id="monthly-pager"></div>
-    </div>
-    <div class="dot-row" id="monthly-dots"></div>
-  </div>
-
   <div class="spacer"></div>
 </div>
 </div><!-- /view-daily -->
@@ -588,7 +572,6 @@ const MONTHLY_GROUPS = {
   other: { name: '其他', items: ['supplement-check', 'accounting', 'diary', 'backup', 'weight', 'habit-review', 'rent', 'hair-removal'] },
 };
 
-const MONTHLY_GROUP_KEYS = Object.keys(MONTHLY_GROUPS);
 
 
 // ═══════════════════════════════════════════════
@@ -601,8 +584,7 @@ const habitData       = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const backfilledDates = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const sending         = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
 const sendingBackfill = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
-let allRecords     = [];
-let monthlyRecords = [];
+let allRecords = [];
 
 let calYear  = today.getFullYear();
 let calMonth = today.getMonth();
@@ -706,40 +688,6 @@ function buildStaticHTML() {
   document.getElementById('week-dots').innerHTML = dotHTML;
   document.getElementById('cal-dots').innerHTML  = dotHTML;
 
-  // ── Monthly pager pages ──
-  document.getElementById('monthly-pager').innerHTML = MONTHLY_GROUP_KEYS.map((gKey, gi) => {
-    const group  = MONTHLY_GROUPS[gKey];
-    const isLast = gi === MONTHLY_GROUP_KEYS.length - 1;
-    const hint   = isLast ? '← 向右滑' : '向左滑 →';
-    return `
-      <div class="group-page">
-        <div class="group-header">
-          <span class="group-name">${group.name}</span>
-          <span class="swipe-hint">${hint}</span>
-        </div>
-        ${group.items.map(key => {
-          const c = MONTHLY_CONFIG[key];
-          return `
-            <div class="monthly-item-row">
-              <div class="habit-info">
-                <div class="habit-icon" style="background:${c.empty}">
-                  <i class="ti ${c.icon}" style="color:${c.done}"></i>
-                </div>
-                <div style="flex:1;min-width:0">
-                  <div class="habit-name">${c.name}</div>
-                  <div id="mdates-${key}"></div>
-                </div>
-              </div>
-              <div id="mbtn-${key}"></div>
-            </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
-
-  // ── Monthly dot indicators ──
-  document.getElementById('monthly-dots').innerHTML = MONTHLY_GROUP_KEYS.map((_, i) =>
-    `<div class="dot ${i === 0 ? 'active' : ''}"></div>`).join('');
-
   // ── Swipe setup ──
   setupSwipe(
     document.getElementById('week-wrap'),
@@ -750,11 +698,6 @@ function buildStaticHTML() {
     document.getElementById('cal-wrap'),
     document.getElementById('cal-pager'),
     [...document.querySelectorAll('#cal-dots .dot')]
-  );
-  setupSwipe(
-    document.getElementById('monthly-wrap'),
-    document.getElementById('monthly-pager'),
-    [...document.querySelectorAll('#monthly-dots .dot')]
   );
 }
 
@@ -1179,113 +1122,6 @@ function changeCalMonth(dir) {
 }
 
 // ═══════════════════════════════════════════════
-//  MONTHLY — LOAD
-// ═══════════════════════════════════════════════
-async function loadMonthlyData() {
-  try {
-    const res = await fetch(API_URL + '?sheet=monthly', { redirect: 'follow' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    monthlyRecords = await res.json();
-  } catch (err) {
-    console.error('[loadMonthlyData] 失敗:', err);
-    monthlyRecords = [];
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  MONTHLY — RENDER
-// ═══════════════════════════════════════════════
-function getMonthlyItemDates(habitKey, monthKey) {
-  return monthlyRecords
-    .filter(r => r.habit === habitKey && r.date.startsWith(monthKey))
-    .map(r => {
-      const parts = r.date.split('-');
-      return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
-    });
-}
-
-function renderMonthlyView() {
-  const monthKey       = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
-  const isCurrentMonth = calYear === today.getFullYear() && calMonth === today.getMonth();
-
-  document.getElementById('monthly-title').textContent =
-    `${calYear} 年 ${calMonth + 1} 月`;
-
-  Object.keys(MONTHLY_CONFIG).forEach(key => {
-    const c      = MONTHLY_CONFIG[key];
-    const datesEl = document.getElementById('mdates-' + key);
-    const btnEl   = document.getElementById('mbtn-'   + key);
-    if (!datesEl || !btnEl) return;
-
-    const dates  = getMonthlyItemDates(key, monthKey);
-    const isDone = dates.length > 0;
-
-    datesEl.innerHTML = isDone
-      ? `<div class="dates">${dates.join('<br>')}</div>`
-      : `<div class="undone">本月尚未完成</div>`;
-
-    if (isCurrentMonth) {
-      if (isDone) {
-        btnEl.innerHTML =
-          `<div class="btn-group">
-            <button class="btn done" style="background:${c.empty};border-color:${c.done};color:${c.textColor}">✓ 完成</button>
-            <button class="btn" onclick="updateMonthly('${key}')">更新</button>
-          </div>`;
-      } else {
-        btnEl.innerHTML =
-          `<div class="btn-group">
-            <button class="btn" onclick="checkinMonthly('${key}')">打卡</button>
-            <button class="btn disabled">更新</button>
-          </div>`;
-      }
-    } else {
-      btnEl.innerHTML = `<span class="readonly">唯讀</span>`;
-    }
-  });
-}
-
-// ═══════════════════════════════════════════════
-//  MONTHLY — CHECKIN / UPDATE
-// ═══════════════════════════════════════════════
-async function checkinMonthly(habitKey) {
-  try {
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ sheet: 'monthly', date: dateKey(today), habit: habitKey, type: 'checkin' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    showToast(`✓ ${MONTHLY_CONFIG[habitKey].name} 打卡成功！`);
-  } catch (err) {
-    console.error('每月打卡失敗', err);
-    showToast('⚠️ 操作失敗，請再試一次', true);
-    return;
-  }
-  await loadMonthlyData();
-  renderMonthlyView();
-}
-
-async function updateMonthly(habitKey) {
-  try {
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ sheet: 'monthly', date: dateKey(today), habit: habitKey, type: 'update' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    showToast(`✓ ${MONTHLY_CONFIG[habitKey].name} 已更新`);
-  } catch (err) {
-    console.error('每月更新失敗', err);
-    showToast('⚠️ 操作失敗，請再試一次', true);
-    return;
-  }
-  await loadMonthlyData();
-  renderMonthlyView();
-}
-
-// ═══════════════════════════════════════════════
 //  SHARED SAVE / RELOAD
 // ═══════════════════════════════════════════════
 function getTodayString() { return dateKey(today); }
@@ -1311,6 +1147,7 @@ function switchTab(tab) {
   document.getElementById('tab-monthly').classList.toggle('active', tab === 'monthly');
   document.getElementById('view-daily').style.display   = tab === 'daily'   ? 'block' : 'none';
   document.getElementById('view-monthly').style.display = tab === 'monthly' ? 'block' : 'none';
+  if (tab === 'monthly') renderMonthlyView();
 }
 
 // ═══════════════════════════════════════════════
@@ -1411,7 +1248,6 @@ async function cancelMonthly(habitKey) {
 buildStaticHTML();
 renderHeader();
 loadData();
-loadMonthlyData().then(() => renderMonthlyView());
 </script>
 </body>
 </html>
