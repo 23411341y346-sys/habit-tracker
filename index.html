@@ -1225,6 +1225,7 @@ async function checkinMonthly(habitKey) {
     await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
     showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 完成！');
     await loadDataAndRender();
+    renderMonthlyView();
   } catch (err) {
     console.error('每月打卡失敗', err);
     showToast('⚠️ 操作失敗，請再試一次', true);
@@ -1236,6 +1237,7 @@ async function cancelMonthly(habitKey) {
     await saveCheckin(getTodayString(), habitKey, false, false, 'monthly');
     showToast(MONTHLY_CONFIG[habitKey].name + ' 已取消');
     await loadDataAndRender();
+    renderMonthlyView();
   } catch (err) {
     console.error('取消失敗', err);
     showToast('⚠️ 操作失敗，請再試一次', true);
