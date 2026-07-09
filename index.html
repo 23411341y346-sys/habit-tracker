@@ -58,38 +58,66 @@
     .habit-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 8px;
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
     }
     .habit-row:last-child { border-bottom: none; }
 
-    .habit-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-
-    .habit-icon {
-      width: 38px; height: 38px;
-      border-radius: 11px;
+    .habit-icon-wrap {
+      width: 32px; height: 32px;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1rem;
       flex-shrink: 0;
     }
-    .habit-name { font-weight: 600; font-size: 0.92rem; }
-    .habit-desc { font-size: 0.76rem; color: var(--sub); margin-top: 1px; }
+    .habit-info { flex: 1; min-width: 0; }
+    .habit-name   { font-size: 0.88rem; font-weight: 600; line-height: 1.2; }
+    .habit-target { font-size: 0.7rem; color: var(--sub); margin-top: 2px; }
 
-    .toggle-btn {
+    .backfill-btn {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--sub);
+      font-size: 0.7rem;
+      cursor: pointer;
+      line-height: 1.3;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .backfill-btn.backfilled {
+      background: var(--bg);
+      border-color: #bbb;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .backfill-btn.disabled {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--sub);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .backfill-btn.sending { opacity: .5; cursor: wait; }
+
+    .checkin-btn {
+      flex: 0 0 auto;
+      padding: 7px 13px;
+      border-radius: 9px;
       border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 14px;
+      background: var(--bg);
+      color: var(--sub);
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       transition: all .15s;
-      flex-shrink: 0;
-      margin-left: 8px;
     }
-    .toggle-btn:active:not(.sending) { transform: scale(.95); }
-    .toggle-btn.sending { opacity: .6; cursor: wait; }
+    .checkin-btn:active:not(.sending) { transform: scale(.95); }
+    .checkin-btn.sending { opacity: .6; cursor: wait; }
 
     /* ── Group pager (shared) ── */
     .group-pager-wrap {
@@ -333,6 +361,93 @@
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Today group section labels ── */
+    .group-section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #888;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0 0 6px 4px;
+      margin-top: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .group-section-label:first-of-type { margin-top: 0; }
+
+    /* ── Tab bar ── */
+    #tab-bar {
+      display: flex;
+      border-bottom: 0.5px solid #eee;
+      background: var(--card);
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 14px;
+      color: #aaa;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+    }
+    .tab.active { color: #111; font-weight: 500; border-bottom: 2px solid #111; }
+
+    /* ── Monthly view ── */
+    #monthly-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0 10px;
+    }
+    #monthly-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    #monthly-nav button:disabled { opacity: 0.35; cursor: default; }
+    #monthly-nav span { font-size: 0.95rem; font-weight: 700; }
+
+    .monthly-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .monthly-row:last-child { border-bottom: none; }
+    .monthly-row .icon-box {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .monthly-row .result      { font-size: 0.72rem; color: var(--sub); margin-top: 2px; }
+    .monthly-row .result.done { color: #388e3c; font-weight: 500; }
+    .monthly-row .btn {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    .monthly-row .readonly {
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      color: var(--sub);
+      margin-left: auto;
+    }
   </style>
 </head>
 <body>
@@ -342,6 +457,12 @@
   <p id="header-date"></p>
 </header>
 
+<div id="tab-bar">
+  <button id="tab-daily"   class="tab active" onclick="switchTab('daily')">每日</button>
+  <button id="tab-monthly" class="tab"        onclick="switchTab('monthly')">每月</button>
+</div>
+
+<div id="view-daily">
 <div class="container">
 
   <!-- TODAY CHECK-IN -->
@@ -364,9 +485,9 @@
     <div class="cal-header-row">
       <span class="card-title" style="margin:0">本月月曆</span>
       <div class="cal-month-nav">
-        <button class="cal-nav" onclick="changeMonth(-1)">&#8249;</button>
+        <button class="cal-nav" onclick="changeCalMonth(-1)">&#8249;</button>
         <span id="cal-title"></span>
-        <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
+        <button class="cal-nav" onclick="changeCalMonth(1)">&#8250;</button>
       </div>
     </div>
     <div class="group-pager-wrap" id="cal-wrap">
@@ -393,6 +514,19 @@
 
   <div class="spacer"></div>
 </div>
+</div><!-- /view-daily -->
+
+<div id="view-monthly" style="display:none">
+  <div class="container">
+    <div id="monthly-nav">
+      <button onclick="changeMonth(-1)">‹ 上個月</button>
+      <span id="monthly-label"></span>
+      <button onclick="changeMonth(1)" id="next-month-btn" disabled>下個月 ›</button>
+    </div>
+    <div id="monthly-content"></div>
+    <div class="spacer"></div>
+  </div>
+</div><!-- /view-monthly -->
 
 <div class="loading-mask" id="loading-mask">
   <div class="spinner"></div>
@@ -406,37 +540,49 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbzurNTfr1RGXjK40hMgZEGGKqKtjZVFTBe7b33YYWovOAZy105Uu477uClRdP0g96kS/exec';
 
 const HABIT_CONFIG = {
-  'english-reading':   { name: '英文-閱讀', icon: 'ti-book',       done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', desc: '每天 20 分鐘', goal: 7 },
-  'english-listening': { name: '英文-聽力', icon: 'ti-headphones', done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', desc: '每天 20 分鐘', goal: 7 },
-  'english-writing':   { name: '英文-寫作', icon: 'ti-pencil',     done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', desc: '每天 20 分鐘', goal: 7 },
-  'healthy-diet':      { name: '健康飲食',  icon: 'ti-apple',      done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', desc: '每天',         goal: 7 },
-  'exercise':          { name: '運動',      icon: 'ti-run',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', desc: '每週 4 天',    goal: 4 },
+  'english-reading':   { name: '英文-閱讀', icon: 'ti-book',       done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', target: '每天 20 分鐘',    goal: 7 },
+  'english-listening': { name: '英文-聽力', icon: 'ti-headphones', done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', target: '每天 20 分鐘',    goal: 7 },
+  'english-writing':   { name: '英文-寫作', icon: 'ti-pencil',     done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', target: '每天 20 分鐘',    goal: 7 },
+  'healthy-diet':      { name: '健康飲食',  icon: 'ti-apple',      done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', target: '每天',           goal: 7 },
+  'exercise':          { name: '運動',      icon: 'ti-run',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', target: '每週 4 天',      goal: 4 },
+  'dental-floss':      { name: '用牙線',   icon: 'ti-dental',     done: '#5BB8D4', empty: '#E0F4F9', textColor: '#0D4A5E', target: '每天',           goal: 7 },
+  'skincare':          { name: '臉部保養', icon: 'ti-sparkles',   done: '#D97BBF', empty: '#FDE8F5', textColor: '#6B1256', target: '每天',           goal: 7 },
+  'water-intake':      { name: '喝水2000cc', icon: 'ti-droplet',  done: '#4FC3E8', empty: '#DFF4FB', textColor: '#0A4A63', target: '每天',           goal: 7 },
+  'supplement':        { name: '保健食品',   icon: 'ti-pill',     done: '#A5D6A7', empty: '#E8F5E9', textColor: '#1B5E20', target: '每天',           goal: 7 },
+  'blue-light':        { name: '睡前藍光',  icon: 'ti-moon',     done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', target: '每天',           goal: 7 },
+  'relax':             { name: '放鬆',      icon: 'ti-mood-smile', done: '#80CBC4', empty: '#E0F2F1', textColor: '#00514B', target: '每天',           goal: 7 },
+  'less-phone':        { name: '少用手機',  icon: 'ti-phone-off',  done: '#EF9A9A', empty: '#FDECEA', textColor: '#7F1D1D', target: '每天',           goal: 7 },
+  'reading':           { name: '閱讀',      icon: 'ti-book-2',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', target: '每天 15 分鐘',    goal: 7 },
+  'web-dev':           { name: '網站建設',  icon: 'ti-code',       done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', target: '每週累積 30 分鐘', goal: 4 },
+  'wealth-mindset':    { name: '財富思維',  icon: 'ti-coin',       done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00', target: '每天 15 分鐘',    goal: 7 },
+  'maritime-law':      { name: '海法大神',  icon: 'ti-gavel',      done: '#78909C', empty: '#ECEFF1', textColor: '#1C313A', target: '每天',           goal: 7 },
 };
 
 const GROUPS = {
-  english: { name: '英文', habits: ['english-reading', 'english-listening', 'english-writing'] },
-  health:  { name: '健康', habits: ['healthy-diet', 'exercise'] },
+  english:  { name: '母語溝通者', habits: ['english-reading', 'english-listening', 'english-writing'] },
+  health:   { name: '塑造者',     habits: ['exercise', 'dental-floss', 'skincare', 'water-intake', 'supplement'] },
+  life:     { name: '熱愛生命者', habits: ['healthy-diet', 'blue-light', 'relax', 'less-phone'] },
+  learning: { name: '佈局者',     habits: ['reading', 'web-dev', 'wealth-mindset', 'maritime-law'] },
 };
 
 const HABIT_KEYS = Object.keys(HABIT_CONFIG);
 const GROUP_KEYS = Object.keys(GROUPS);
 
 const MONTHLY_CONFIG = {
-  'towel':            { name: '浴巾',             icon: 'ti-wash',             done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', group: 'clean' },
-  'razor':            { name: '刮鬍刀',           icon: 'ti-razor',            done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', group: 'clean' },
-  'bathroom':         { name: '浴室',             icon: 'ti-bath',             done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', group: 'clean' },
-  'jacket':           { name: '外套',             icon: 'ti-hanger',           done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', group: 'clean' },
-  'bedsheet':         { name: '被單、床單',       icon: 'ti-bed',              done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', group: 'clean' },
-  'supplement-check': { name: '盤點保健食品',     icon: 'ti-pill',             done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', group: 'other' },
-  'accounting':       { name: '記帳',             icon: 'ti-receipt',          done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', group: 'other' },
-  'diary':            { name: '日記',             icon: 'ti-notebook',         done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00', group: 'other' },
-  'backup':           { name: '備份硬碟',         icon: 'ti-device-floppy',   done: '#5BB8D4', empty: '#E0F4F9', textColor: '#0D4A5E', group: 'other' },
-  'weight':           { name: '檢視體重',         icon: 'ti-scale',            done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', group: 'other' },
-  'habit-review':     { name: '每日習慣實行程度', icon: 'ti-chart-bar',        done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', group: 'other' },
-  'rent':             { name: '房租（每月10號）', icon: 'ti-home',             done: '#80CBC4', empty: '#E0F2F1', textColor: '#00514B', group: 'other' },
-  'hair-removal':     { name: '除毛',             icon: 'ti-droplet-half-2',  done: '#EF9A9A', empty: '#FDECEA', textColor: '#7F1D1D', group: 'other' },
+  'towel':            { name: '浴巾',             icon: 'ti-wash',          done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C' },
+  'razor':            { name: '刮鬍刀',           icon: 'ti-razor',         done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92' },
+  'bathroom':         { name: '浴室',             icon: 'ti-bath',          done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041' },
+  'jacket':           { name: '外套',             icon: 'ti-hanger',        done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806' },
+  'bedsheet':         { name: '被單、床單',       icon: 'ti-bed',           done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E' },
+  'supplement-check': { name: '盤點保健食品',     icon: 'ti-pill',          done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92' },
+  'accounting':       { name: '記帳',             icon: 'ti-receipt',       done: '#97C459', empty: '#EAF3DE', textColor: '#27500A' },
+  'diary':            { name: '日記',             icon: 'ti-notebook',      done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00' },
+  'backup':           { name: '備份硬碟',         icon: 'ti-device-floppy', done: '#5BB8D4', empty: '#E0F4F9', textColor: '#0D4A5E' },
+  'weight':           { name: '檢視體重',         icon: 'ti-scale',         done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C' },
+  'habit-review':     { name: '每日習慣實行程度', icon: 'ti-chart-bar',     done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73' },
+  'rent':             { name: '房租（每月10號）', icon: 'ti-home',          done: '#80CBC4', empty: '#E0F2F1', textColor: '#00514B' },
+  'hair-removal':     { name: '除毛',             icon: 'ti-droplet-half-2',done: '#EF9A9A', empty: '#FDECEA', textColor: '#7F1D1D' },
 };
-
 const MONTHLY_GROUPS = {
   clean: { name: '清潔', items: ['towel', 'razor', 'bathroom', 'jacket', 'bedsheet'] },
   other: { name: '其他', items: ['supplement-check', 'accounting', 'diary', 'backup', 'weight', 'habit-review', 'rent', 'hair-removal'] },
@@ -444,14 +590,18 @@ const MONTHLY_GROUPS = {
 
 const MONTHLY_GROUP_KEYS = Object.keys(MONTHLY_GROUPS);
 
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
-const habitData = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
-const sending   = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+const habitData       = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
+const backfilledDates = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
+const sending         = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+const sendingBackfill = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+let allRecords     = [];
 let monthlyRecords = [];
 
 let calYear  = today.getFullYear();
@@ -472,23 +622,27 @@ function dateKey(d) {
 // ═══════════════════════════════════════════════
 function buildStaticHTML() {
 
-  // ── Today rows ──
-  document.getElementById('today-rows').innerHTML = HABIT_KEYS.map(key => {
-    const c = HABIT_CONFIG[key];
-    return `
-      <div class="habit-row">
-        <div class="habit-info">
-          <div class="habit-icon" style="background:${c.empty}">
-            <i class="ti ${c.icon}" style="color:${c.done}"></i>
+  // ── Today rows（依群組分區）──
+  document.getElementById('today-rows').innerHTML = GROUP_KEYS.map(gKey => {
+    const group = GROUPS[gKey];
+    const rows  = group.habits.map(key => {
+      const c = HABIT_CONFIG[key];
+      return `
+        <div class="habit-row">
+          <div class="habit-icon-wrap" style="background:${c.empty};color:${c.textColor}">
+            <i class="ti ${c.icon}" aria-hidden="true"></i>
           </div>
-          <div>
+          <div class="habit-info">
             <div class="habit-name">${c.name}</div>
-            <div class="habit-desc">${c.desc}</div>
+            <div class="habit-target">${c.target}</div>
           </div>
-        </div>
-        <button class="toggle-btn" id="btn-${key}"
-                onclick="toggleCheckIn('${key}')">打卡</button>
-      </div>`;
+          <button class="backfill-btn" id="backfill-btn-${key}"
+                  onclick="toggleBackfill('${key}')">前一天補打</button>
+          <button class="checkin-btn" id="checkin-btn-${key}"
+                  onclick="toggleCheckIn('${key}')">打卡</button>
+        </div>`;
+    }).join('');
+    return `<div class="group-section-label">${group.name}</div>${rows}`;
   }).join('');
 
   // ── Week pager pages ──
@@ -662,19 +816,32 @@ async function loadData() {
     console.log('[loadData] today records:',
       JSON.stringify(records.filter(r => r.date === todayKey), null, 2));
 
-    // 後出現的紀錄覆蓋前面（取最新狀態）
+    // 正規化所有記錄，供每月視圖查詢
+    allRecords = records.map(r => ({
+      date:       r.date,
+      habit:      r.habit,
+      done:       r.done       === true || r.done       === 'TRUE',
+      backfilled: r.backfilled === true || r.backfilled === 'TRUE',
+      type:       r.type || 'daily',
+    }));
+
+    // 後出現的紀錄覆蓋前面（取最新狀態），只處理每日記錄
     const stateMap = new Map();
-    for (const r of records) {
-      stateMap.set(`${r.date}|${r.habit}`, r.done === true || r.done === 'TRUE');
+    for (const r of allRecords) {
+      if (r.type === 'monthly') continue;
+      stateMap.set(`${r.date}|${r.habit}`, { done: r.done, backfilled: r.backfilled });
     }
 
-    HABIT_KEYS.forEach(k => habitData[k].clear());
-    for (const [mapKey, done] of stateMap) {
+    HABIT_KEYS.forEach(k => { habitData[k].clear(); backfilledDates[k].clear(); });
+    for (const [mapKey, { done, backfilled }] of stateMap) {
       if (!done) continue;
       const idx   = mapKey.indexOf('|');
       const date  = mapKey.slice(0, idx);
       const habit = mapKey.slice(idx + 1);
-      if (habitData[habit] !== undefined) habitData[habit].add(date);
+      if (habitData[habit] !== undefined) {
+        habitData[habit].add(date);
+        if (backfilled) backfilledDates[habit].add(date);
+      }
     }
 
     HABIT_KEYS.forEach(k =>
@@ -687,6 +854,77 @@ async function loadData() {
     renderAll();
   } finally {
     setLoading(false);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  YESTERDAY KEY
+// ═══════════════════════════════════════════════
+function yesterdayKey() {
+  const y = new Date(today);
+  y.setDate(y.getDate() - 1);
+  return dateKey(y);
+}
+
+// ═══════════════════════════════════════════════
+//  BACKFILL STATE
+// ═══════════════════════════════════════════════
+function getBackfillState(key) {
+  const yKey = yesterdayKey();
+  if (!habitData[key].has(yKey))      return 'can-backfill';
+  if (backfilledDates[key].has(yKey)) return 'backfilled';
+  return 'already-done';
+}
+
+// ═══════════════════════════════════════════════
+//  API — POST 補打切換
+// ═══════════════════════════════════════════════
+async function toggleBackfill(key) {
+  const yKey  = yesterdayKey();
+  const state = getBackfillState(key);
+  if (state === 'already-done' || sendingBackfill[key]) return;
+
+  sendingBackfill[key] = true;
+  const btn = document.getElementById('backfill-btn-' + key);
+  if (btn) btn.classList.add('sending');
+
+  const newDone = state === 'can-backfill';
+
+  // 樂觀更新
+  if (newDone) {
+    habitData[key].add(yKey);
+    backfilledDates[key].add(yKey);
+  } else {
+    habitData[key].delete(yKey);
+    backfilledDates[key].delete(yKey);
+  }
+  renderAll();
+
+  try {
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ date: yKey, habit: key, done: newDone, backfilled: newDone, type: 'daily' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const c = HABIT_CONFIG[key];
+    showToast(newDone ? `✓ ${c.name} 補打成功！` : `${c.name} 補打已取消`);
+  } catch (err) {
+    console.error('補打失敗', err);
+    // 回滾
+    if (newDone) {
+      habitData[key].delete(yKey);
+      backfilledDates[key].delete(yKey);
+    } else {
+      habitData[key].add(yKey);
+      backfilledDates[key].add(yKey);
+    }
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  } finally {
+    sendingBackfill[key] = false;
+    if (btn) btn.classList.remove('sending');
+    renderAll();
   }
 }
 
@@ -704,7 +942,7 @@ async function toggleCheckIn(key) {
   if (wasDone) habitData[key].delete(todayKey);
   else         habitData[key].add(todayKey);
 
-  const btn = document.getElementById('btn-' + key);
+  const btn = document.getElementById('checkin-btn-' + key);
   btn.classList.add('sending');
   renderTodayButtons();
 
@@ -713,7 +951,7 @@ async function toggleCheckIn(key) {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone }),
+      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone, backfilled: false, type: 'daily' }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const c = HABIT_CONFIG[key];
@@ -756,6 +994,7 @@ function renderAll() {
   renderTodayButtons();
   renderWeek();
   renderCalendar();
+  renderMonthlyView();
 }
 
 function renderHeader() {
@@ -767,18 +1006,39 @@ function renderHeader() {
 function renderTodayButtons() {
   const todayKey = dateKey(today);
   HABIT_KEYS.forEach(key => {
-    const c   = HABIT_CONFIG[key];
-    const btn = document.getElementById('btn-' + key);
-    if (!btn) return;
-    const done = habitData[key].has(todayKey);
-    if (done) {
-      btn.textContent = '✓ 完成';
-      btn.style.cssText =
-        `background:${c.empty};border-color:${c.done};color:${c.textColor}`;
+    const c = HABIT_CONFIG[key];
+
+    // ── 打卡按鈕 ──
+    const checkinBtn = document.getElementById('checkin-btn-' + key);
+    if (checkinBtn) {
+      const done = habitData[key].has(todayKey);
+      if (done) {
+        checkinBtn.textContent = '✓ 完成';
+        checkinBtn.style.cssText =
+          `background:${c.empty};border-color:${c.done};color:${c.textColor}`;
+      } else {
+        checkinBtn.textContent = '打卡';
+        checkinBtn.style.cssText =
+          'background:var(--bg);border-color:var(--border);color:var(--sub)';
+      }
+    }
+
+    // ── 補打按鈕 ──
+    const backfillBtn = document.getElementById('backfill-btn-' + key);
+    if (!backfillBtn) return;
+    const bfState = getBackfillState(key);
+    backfillBtn.className = 'backfill-btn';
+    if (bfState === 'backfilled') {
+      backfillBtn.textContent = '✓ 已補打';
+      backfillBtn.classList.add('backfilled');
+      backfillBtn.disabled = false;
+    } else if (bfState === 'already-done') {
+      backfillBtn.textContent = '前一天已打';
+      backfillBtn.classList.add('disabled');
+      backfillBtn.disabled = true;
     } else {
-      btn.textContent = '打卡';
-      btn.style.cssText =
-        'background:#f5f7fa;border-color:#e0e0e0;color:#5f6368';
+      backfillBtn.textContent = '前一天補打';
+      backfillBtn.disabled = false;
     }
   });
 }
@@ -848,9 +1108,9 @@ function pieSvg(states, colorPairs, size = 22) {
 //  CALENDAR HELPERS
 // ═══════════════════════════════════════════════
 
-// 計算某習慣在「當月」（今天所在的月份）的完成天數
-function getMonthCount(habitKey) {
-  const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+// 計算某習慣在指定年月的完成天數
+function getMonthCount(habitKey, year, month) {
+  const yyyymm = `${year}-${String(month + 1).padStart(2, '0')}`;
   let count = 0;
   for (const d of habitData[habitKey]) {
     if (d.startsWith(yyyymm)) count++;
@@ -905,12 +1165,12 @@ function renderCalendar() {
     // 更新圖例的本月累積天數
     group.habits.forEach(hk => {
       const el = document.getElementById('lcount-' + hk);
-      if (el) el.textContent = getMonthCount(hk) + ' 日';
+      if (el) el.textContent = getMonthCount(hk, calYear, calMonth) + ' 日';
     });
   });
 }
 
-function changeMonth(dir) {
+function changeCalMonth(dir) {
   calMonth += dir;
   if (calMonth < 0)  { calMonth = 11; calYear--; }
   if (calMonth > 11) { calMonth = 0;  calYear++; }
@@ -1023,6 +1283,126 @@ async function updateMonthly(habitKey) {
   }
   await loadMonthlyData();
   renderMonthlyView();
+}
+
+// ═══════════════════════════════════════════════
+//  SHARED SAVE / RELOAD
+// ═══════════════════════════════════════════════
+function getTodayString() { return dateKey(today); }
+
+async function saveCheckin(date, habit, done, backfilled = false, type = 'daily') {
+  const res = await fetch(API_URL, {
+    method:   'POST',
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain' },
+    body:     JSON.stringify({ date, habit, done, backfilled, type }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+async function loadDataAndRender() { await loadData(); }
+
+// ═══════════════════════════════════════════════
+//  TAB SWITCH
+// ═══════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('tab-daily').classList.toggle('active',   tab === 'daily');
+  document.getElementById('tab-monthly').classList.toggle('active', tab === 'monthly');
+  document.getElementById('view-daily').style.display   = tab === 'daily'   ? 'block' : 'none';
+  document.getElementById('view-monthly').style.display = tab === 'monthly' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════
+//  MONTHLY VIEW
+// ═══════════════════════════════════════════════
+let currentMonthOffset = 0;
+
+function changeMonth(delta) {
+  currentMonthOffset += delta;
+  if (currentMonthOffset > 0) currentMonthOffset = 0;
+  const nextBtn = document.getElementById('next-month-btn');
+  if (nextBtn) nextBtn.disabled = currentMonthOffset === 0;
+  renderMonthlyView();
+}
+
+function getMonthKey(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function renderMonthlyView() {
+  const el = document.getElementById('monthly-content');
+  if (!el) return;
+
+  const key            = getMonthKey(currentMonthOffset);
+  const isCurrentMonth = currentMonthOffset === 0;
+  const [y, m]         = key.split('-');
+  document.getElementById('monthly-label').textContent = y + ' 年 ' + parseInt(m) + ' 月';
+
+  // 後出現的記錄覆蓋前面，取最新狀態
+  const monthlyState = {};
+  allRecords
+    .filter(r => r.type === 'monthly' && r.date.startsWith(key))
+    .forEach(r => { monthlyState[r.habit] = r; });
+
+  let html = '';
+  Object.entries(MONTHLY_GROUPS).forEach(([, group]) => {
+    html += '<div class="group-section-label">' + group.name + '</div>';
+    group.items.forEach(itemKey => {
+      const item   = MONTHLY_CONFIG[itemKey];
+      const record = monthlyState[itemKey];
+      const isDone = record ? record.done : false;
+      const dateDisplay = (isDone && record)
+        ? record.date.slice(5).replace('-', ' 月 ').replace(/^0(\d)/, '$1') + ' 日完成'
+        : '本月尚未完成';
+
+      html += '<div class="monthly-row">';
+      html += '<div class="icon-box" style="background:' + item.empty + '">' +
+              '<i class="ti ' + item.icon + '" style="font-size:18px;color:' + item.textColor + '" aria-hidden="true"></i></div>';
+      html += '<div class="habit-info">' +
+              '<div class="habit-name">' + item.name + '</div>' +
+              '<div class="result ' + (isDone ? 'done' : 'undone') + '">' + dateDisplay + '</div>' +
+              '</div>';
+      if (isCurrentMonth) {
+        if (isDone) {
+          html += '<button class="btn done" ' +
+                  'style="background:' + item.empty + ';color:' + item.textColor + ';border-color:' + item.done + '" ' +
+                  'onclick="cancelMonthly(\'' + itemKey + '\')">✓ 完成</button>';
+        } else {
+          html += '<button class="btn" onclick="checkinMonthly(\'' + itemKey + '\')">打卡</button>';
+        }
+      } else {
+        html += '<span class="readonly">唯讀</span>';
+      }
+      html += '</div>';
+    });
+  });
+  el.innerHTML = html;
+}
+
+async function checkinMonthly(habitKey) {
+  try {
+    await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
+    showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 完成！');
+    await loadDataAndRender();
+  } catch (err) {
+    console.error('每月打卡失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  }
+}
+
+async function cancelMonthly(habitKey) {
+  try {
+    await saveCheckin(getTodayString(), habitKey, false, false, 'monthly');
+    showToast(MONTHLY_CONFIG[habitKey].name + ' 已取消');
+    await loadDataAndRender();
+  } catch (err) {
+    console.error('取消失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  }
 }
 
 // ═══════════════════════════════════════════════
