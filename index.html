@@ -265,6 +265,57 @@
     .toast.show  { transform: translateX(-50%) translateY(0); }
     .toast.error { background: #c62828; }
 
+    /* ── Monthly items ── */
+    .monthly-item-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .monthly-item-row:last-child { border-bottom: none; }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .dates {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #2e7d32;
+      line-height: 1.7;
+    }
+    .undone {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #c62828;
+    }
+    .btn {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      background: #f5f7fa;
+      color: #5f6368;
+      transition: all .15s;
+    }
+    .btn.done { border-color: transparent; }
+    .btn.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .readonly {
+      font-size: 0.78rem;
+      color: var(--sub);
+      flex-shrink: 0;
+      align-self: center;
+    }
+
     /* ── Loading ── */
     .loading-mask {
       position: fixed; inset: 0;
@@ -324,6 +375,22 @@
     <div class="dot-row" id="cal-dots"></div>
   </div>
 
+  <!-- MONTHLY ITEMS -->
+  <div class="card">
+    <div class="cal-header-row">
+      <span class="card-title" style="margin:0">每月事項</span>
+      <div class="cal-month-nav">
+        <button class="cal-nav" onclick="changeMonth(-1)">&#8249;</button>
+        <span id="monthly-title"></span>
+        <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+    </div>
+    <div class="group-pager-wrap" id="monthly-wrap">
+      <div class="group-pager" id="monthly-pager"></div>
+    </div>
+    <div class="dot-row" id="monthly-dots"></div>
+  </div>
+
   <div class="spacer"></div>
 </div>
 
@@ -354,6 +421,29 @@ const GROUPS = {
 const HABIT_KEYS = Object.keys(HABIT_CONFIG);
 const GROUP_KEYS = Object.keys(GROUPS);
 
+const MONTHLY_CONFIG = {
+  'towel':            { name: '浴巾',             icon: 'ti-wash',             done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', group: 'clean' },
+  'razor':            { name: '刮鬍刀',           icon: 'ti-razor',            done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', group: 'clean' },
+  'bathroom':         { name: '浴室',             icon: 'ti-bath',             done: '#5DCAA5', empty: '#E1F5EE', textColor: '#085041', group: 'clean' },
+  'jacket':           { name: '外套',             icon: 'ti-hanger',           done: '#EF9F27', empty: '#FAEEDA', textColor: '#633806', group: 'clean' },
+  'bedsheet':         { name: '被單、床單',       icon: 'ti-bed',              done: '#ED93B1', empty: '#FBEAF0', textColor: '#72243E', group: 'clean' },
+  'supplement-check': { name: '盤點保健食品',     icon: 'ti-pill',             done: '#B39DDB', empty: '#EDE7F6', textColor: '#311B92', group: 'other' },
+  'accounting':       { name: '記帳',             icon: 'ti-receipt',          done: '#97C459', empty: '#EAF3DE', textColor: '#27500A', group: 'other' },
+  'diary':            { name: '日記',             icon: 'ti-notebook',         done: '#FFD54F', empty: '#FFF8E1', textColor: '#6B4C00', group: 'other' },
+  'backup':           { name: '備份硬碟',         icon: 'ti-device-floppy',   done: '#5BB8D4', empty: '#E0F4F9', textColor: '#0D4A5E', group: 'other' },
+  'weight':           { name: '檢視體重',         icon: 'ti-scale',            done: '#E89567', empty: '#FCEBE0', textColor: '#6B2B0C', group: 'other' },
+  'habit-review':     { name: '每日習慣實行程度', icon: 'ti-chart-bar',        done: '#B594E2', empty: '#F0E8FB', textColor: '#3D1F73', group: 'other' },
+  'rent':             { name: '房租（每月10號）', icon: 'ti-home',             done: '#80CBC4', empty: '#E0F2F1', textColor: '#00514B', group: 'other' },
+  'hair-removal':     { name: '除毛',             icon: 'ti-droplet-half-2',  done: '#EF9A9A', empty: '#FDECEA', textColor: '#7F1D1D', group: 'other' },
+};
+
+const MONTHLY_GROUPS = {
+  clean: { name: '清潔', items: ['towel', 'razor', 'bathroom', 'jacket', 'bedsheet'] },
+  other: { name: '其他', items: ['supplement-check', 'accounting', 'diary', 'backup', 'weight', 'habit-review', 'rent', 'hair-removal'] },
+};
+
+const MONTHLY_GROUP_KEYS = Object.keys(MONTHLY_GROUPS);
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -362,6 +452,7 @@ today.setHours(0, 0, 0, 0);
 
 const habitData = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const sending   = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
+let monthlyRecords = [];
 
 let calYear  = today.getFullYear();
 let calMonth = today.getMonth();
@@ -461,6 +552,40 @@ function buildStaticHTML() {
   document.getElementById('week-dots').innerHTML = dotHTML;
   document.getElementById('cal-dots').innerHTML  = dotHTML;
 
+  // ── Monthly pager pages ──
+  document.getElementById('monthly-pager').innerHTML = MONTHLY_GROUP_KEYS.map((gKey, gi) => {
+    const group  = MONTHLY_GROUPS[gKey];
+    const isLast = gi === MONTHLY_GROUP_KEYS.length - 1;
+    const hint   = isLast ? '← 向右滑' : '向左滑 →';
+    return `
+      <div class="group-page">
+        <div class="group-header">
+          <span class="group-name">${group.name}</span>
+          <span class="swipe-hint">${hint}</span>
+        </div>
+        ${group.items.map(key => {
+          const c = MONTHLY_CONFIG[key];
+          return `
+            <div class="monthly-item-row">
+              <div class="habit-info">
+                <div class="habit-icon" style="background:${c.empty}">
+                  <i class="ti ${c.icon}" style="color:${c.done}"></i>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="habit-name">${c.name}</div>
+                  <div id="mdates-${key}"></div>
+                </div>
+              </div>
+              <div id="mbtn-${key}"></div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+
+  // ── Monthly dot indicators ──
+  document.getElementById('monthly-dots').innerHTML = MONTHLY_GROUP_KEYS.map((_, i) =>
+    `<div class="dot ${i === 0 ? 'active' : ''}"></div>`).join('');
+
   // ── Swipe setup ──
   setupSwipe(
     document.getElementById('week-wrap'),
@@ -471,6 +596,11 @@ function buildStaticHTML() {
     document.getElementById('cal-wrap'),
     document.getElementById('cal-pager'),
     [...document.querySelectorAll('#cal-dots .dot')]
+  );
+  setupSwipe(
+    document.getElementById('monthly-wrap'),
+    document.getElementById('monthly-pager'),
+    [...document.querySelectorAll('#monthly-dots .dot')]
   );
 }
 
@@ -785,6 +915,114 @@ function changeMonth(dir) {
   if (calMonth < 0)  { calMonth = 11; calYear--; }
   if (calMonth > 11) { calMonth = 0;  calYear++; }
   renderCalendar();
+  renderMonthlyView();
+}
+
+// ═══════════════════════════════════════════════
+//  MONTHLY — LOAD
+// ═══════════════════════════════════════════════
+async function loadMonthlyData() {
+  try {
+    const res = await fetch(API_URL + '?sheet=monthly', { redirect: 'follow' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    monthlyRecords = await res.json();
+  } catch (err) {
+    console.error('[loadMonthlyData] 失敗:', err);
+    monthlyRecords = [];
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  MONTHLY — RENDER
+// ═══════════════════════════════════════════════
+function getMonthlyItemDates(habitKey, monthKey) {
+  return monthlyRecords
+    .filter(r => r.habit === habitKey && r.date.startsWith(monthKey))
+    .map(r => {
+      const parts = r.date.split('-');
+      return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+    });
+}
+
+function renderMonthlyView() {
+  const monthKey       = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+  const isCurrentMonth = calYear === today.getFullYear() && calMonth === today.getMonth();
+
+  document.getElementById('monthly-title').textContent =
+    `${calYear} 年 ${calMonth + 1} 月`;
+
+  Object.keys(MONTHLY_CONFIG).forEach(key => {
+    const c      = MONTHLY_CONFIG[key];
+    const datesEl = document.getElementById('mdates-' + key);
+    const btnEl   = document.getElementById('mbtn-'   + key);
+    if (!datesEl || !btnEl) return;
+
+    const dates  = getMonthlyItemDates(key, monthKey);
+    const isDone = dates.length > 0;
+
+    datesEl.innerHTML = isDone
+      ? `<div class="dates">${dates.join('<br>')}</div>`
+      : `<div class="undone">本月尚未完成</div>`;
+
+    if (isCurrentMonth) {
+      if (isDone) {
+        btnEl.innerHTML =
+          `<div class="btn-group">
+            <button class="btn done" style="background:${c.empty};border-color:${c.done};color:${c.textColor}">✓ 完成</button>
+            <button class="btn" onclick="updateMonthly('${key}')">更新</button>
+          </div>`;
+      } else {
+        btnEl.innerHTML =
+          `<div class="btn-group">
+            <button class="btn" onclick="checkinMonthly('${key}')">打卡</button>
+            <button class="btn disabled">更新</button>
+          </div>`;
+      }
+    } else {
+      btnEl.innerHTML = `<span class="readonly">唯讀</span>`;
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  MONTHLY — CHECKIN / UPDATE
+// ═══════════════════════════════════════════════
+async function checkinMonthly(habitKey) {
+  try {
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ sheet: 'monthly', date: dateKey(today), habit: habitKey, type: 'checkin' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast(`✓ ${MONTHLY_CONFIG[habitKey].name} 打卡成功！`);
+  } catch (err) {
+    console.error('每月打卡失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+    return;
+  }
+  await loadMonthlyData();
+  renderMonthlyView();
+}
+
+async function updateMonthly(habitKey) {
+  try {
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ sheet: 'monthly', date: dateKey(today), habit: habitKey, type: 'update' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast(`✓ ${MONTHLY_CONFIG[habitKey].name} 已更新`);
+  } catch (err) {
+    console.error('每月更新失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+    return;
+  }
+  await loadMonthlyData();
+  renderMonthlyView();
 }
 
 // ═══════════════════════════════════════════════
@@ -793,6 +1031,7 @@ function changeMonth(dir) {
 buildStaticHTML();
 renderHeader();
 loadData();
+loadMonthlyData().then(() => renderMonthlyView());
 </script>
 </body>
 </html>
