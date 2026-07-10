@@ -1205,11 +1205,15 @@ function renderMonthlyView() {
               '</div>';
       if (isCurrentMonth) {
         if (isDone) {
-          html += '<button class="btn done" ' +
-                  'style="background:' + item.empty + ';color:' + item.textColor + ';border-color:' + item.done + '" ' +
-                  'onclick="cancelMonthly(\'' + itemKey + '\')">✓ 完成</button>';
+          html += '<div class="btn-group">';
+          html += '<button class="btn done" style="background:' + item.empty + ';color:' + item.textColor + '">✓ 完成</button>';
+          html += '<button class="btn" onclick="updateMonthly(\'' + itemKey + '\')">更新</button>';
+          html += '</div>';
         } else {
+          html += '<div class="btn-group">';
           html += '<button class="btn" onclick="checkinMonthly(\'' + itemKey + '\')">打卡</button>';
+          html += '<button class="btn disabled" style="pointer-events:none;opacity:0.4;">更新</button>';
+          html += '</div>';
         }
       } else {
         html += '<span class="readonly">唯讀</span>';
@@ -1228,6 +1232,18 @@ async function checkinMonthly(habitKey) {
     renderMonthlyView();
   } catch (err) {
     console.error('每月打卡失敗', err);
+    showToast('⚠️ 操作失敗，請再試一次', true);
+  }
+}
+
+async function updateMonthly(habitKey) {
+  try {
+    await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
+    showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 已更新');
+    await loadDataAndRender();
+    renderMonthlyView();
+  } catch (err) {
+    console.error('每月更新失敗', err);
     showToast('⚠️ 操作失敗，請再試一次', true);
   }
 }
