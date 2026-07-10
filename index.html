@@ -1238,7 +1238,13 @@ async function checkinMonthly(habitKey) {
 
 async function updateMonthly(habitKey) {
   try {
-    await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
+    const res = await fetch(API_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({ date: getTodayString(), habit: habitKey, done: true, backfilled: false, type: 'monthly', allowDuplicate: true }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 已更新');
     await loadDataAndRender();
     renderMonthlyView();
