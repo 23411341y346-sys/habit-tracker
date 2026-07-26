@@ -428,7 +428,7 @@
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .monthly-row .result      { font-size: 0.72rem; color: var(--sub); margin-top: 2px; }
+    .monthly-row .result      { font-size: 0.72rem; color: var(--sub); margin-top: 2px; line-height: 1.6; }
     .monthly-row .result.done { color: #388e3c; font-weight: 500; }
     .monthly-row .btn {
       flex-shrink: 0;
@@ -1179,21 +1179,26 @@ function renderMonthlyView() {
   const [y, m]         = key.split('-');
   document.getElementById('monthly-label').textContent = y + ' 年 ' + parseInt(m) + ' 月';
 
-  // 後出現的記錄覆蓋前面，取最新狀態
-  const monthlyState = {};
+  // 同一項目本月可有多筆完成紀錄，全部收集（同日去重後排序）
+  const monthlyDates = {};
   allRecords
-    .filter(r => r.type === 'monthly' && r.date.startsWith(key))
-    .forEach(r => { monthlyState[r.habit] = r; });
+    .filter(r => r.type === 'monthly' && r.date.startsWith(key) && r.done === true)
+    .forEach(r => {
+      (monthlyDates[r.habit] = monthlyDates[r.habit] || new Set()).add(r.date);
+    });
 
   let html = '';
   Object.entries(MONTHLY_GROUPS).forEach(([, group]) => {
     html += '<div class="group-section-label">' + group.name + '</div>';
     group.items.forEach(itemKey => {
       const item   = MONTHLY_CONFIG[itemKey];
-      const record = monthlyState[itemKey];
-      const isDone = record ? record.done : false;
-      const dateDisplay = (isDone && record)
-        ? record.date.slice(5).replace('-', ' 月 ').replace(/^0(\d)/, '$1') + ' 日完成'
+      const dates  = [...(monthlyDates[itemKey] || [])].sort();
+      const isDone = dates.length > 0;
+      const dateDisplay = isDone
+        ? dates.map(d => {
+            const p = d.split('-');
+            return parseInt(p[1]) + ' 月 ' + parseInt(p[2]) + ' 日完成';
+          }).join('<br>')
         : '本月尚未完成';
 
       html += '<div class="monthly-row">';
