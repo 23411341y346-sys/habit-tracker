@@ -4,8 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>習慣追蹤</title>
+  <!-- 釘住版本＋SRI：升版時要重算 integrity，並確認 CONFIG 用到的 ti-* 圖示都還在 -->
   <link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css"
+    integrity="sha384-ND+q1IVc0KDElX60dZaqKc7Xl9cdxd2PpU2JfVUHcurCkFVtVLFdt9vJfxtHSL3p"
+    crossorigin="anonymous" />
   <style>
     :root {
       --bg:       #f5f7fa;
@@ -294,31 +297,11 @@
     .toast.error { background: #c62828; }
 
     /* ── Monthly items ── */
-    .monthly-item-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      gap: 8px;
-    }
-    .monthly-item-row:last-child { border-bottom: none; }
     .btn-group {
       display: flex;
       flex-direction: column;
       gap: 5px;
       flex-shrink: 0;
-    }
-    .dates {
-      font-size: 12px;
-      margin-top: 4px;
-      color: #2e7d32;
-      line-height: 1.7;
-    }
-    .undone {
-      font-size: 12px;
-      margin-top: 4px;
-      color: #c62828;
     }
     .btn {
       border: 1.5px solid var(--border);
@@ -429,7 +412,9 @@
       flex-shrink: 0;
     }
     .monthly-row .result      { font-size: 0.72rem; color: var(--sub); margin-top: 2px; line-height: 1.6; }
-    .monthly-row .result.done { color: #388e3c; font-weight: 500; }
+    .monthly-row .result.done   { color: #388e3c; font-weight: 500; }
+    .monthly-row .result.undone { color: #c62828; }
+    .monthly-row .btn.sending   { opacity: 0.55; cursor: wait; pointer-events: none; }
     .monthly-row .btn {
       flex-shrink: 0;
       padding: 6px 12px;
@@ -521,7 +506,7 @@
 // ═══════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbzurNTfr1RGXjK40hMgZEGGKqKtjZVFTBe7b33YYWovOAZy105Uu477uClRdP0g96kS/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwEULHaOZJQ5nnNsVZ2nQcfqvqn5w59ME4g49DRgZNPY1V2N8s0heDtCP6qn3bAQfHw/exec';
 
 const HABIT_CONFIG = {
   'english-reading':   { name: '英文-閱讀', icon: 'ti-book',       done: '#85B7EB', empty: '#E6F1FB', textColor: '#0C447C', target: '每天 20 分鐘',    goal: 7 },
@@ -579,10 +564,14 @@ const MONTHLY_GROUPS = {
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-const today = new Date();
-today.setHours(0, 0, 0, 0);
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+let today = startOfToday();
 
-const habitData       = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
+const habitData      = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const backfilledDates = Object.fromEntries(HABIT_KEYS.map(k => [k, new Set()]));
 const sending         = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
 const sendingBackfill = Object.fromEntries(HABIT_KEYS.map(k => [k, false]));
@@ -599,6 +588,33 @@ function dateKey(d) {
   const m  = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+// 頁面開著跨過午夜時把 today 換成新的一天；有換日回傳 true
+function syncToday() {
+  const now = startOfToday();
+  if (dateKey(now) === dateKey(today)) return false;
+  const calOnCurrent = calYear === today.getFullYear() && calMonth === today.getMonth();
+  today = now;
+  if (calOnCurrent) { calYear = today.getFullYear(); calMonth = today.getMonth(); }
+  return true;
+}
+
+// 寫入前呼叫：畫面還停在昨天就先換日重畫、擋下這次點擊，避免記到使用者沒看到的日期
+function blockIfDayChanged() {
+  if (!syncToday()) return false;
+  renderAll();
+  showToast('已經換日，畫面已更新，請再按一次');
+  loadData();
+  return true;
+}
+
+// 後端若把日期欄轉成 Date，回來的會是 ISO 字串；一律轉回本地時間的 YYYY-MM-DD
+function normalizeDate(v) {
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  return isNaN(d) ? s : dateKey(d);
 }
 
 // ═══════════════════════════════════════════════
@@ -744,26 +760,21 @@ async function loadData() {
   setLoading(true);
   try {
     const res = await fetch(API_URL, { redirect: 'follow' });
-    console.log('[loadData] status:', res.status, '| url:', res.url);
-
     const rawText = await res.text();
-    console.log('[loadData] raw response:', rawText);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     let records;
     try   { records = JSON.parse(rawText); }
-    catch (e) { throw new Error('JSON 解析失敗: ' + e.message); }
-
-    const todayKey = dateKey(today);
-    console.log('[loadData] today:', todayKey);
-    console.log('[loadData] all records:', JSON.stringify(records, null, 2));
-    console.log('[loadData] today records:',
-      JSON.stringify(records.filter(r => r.date === todayKey), null, 2));
+    catch (e) {
+      // 非 JSON 多半是 Apps Script 的錯誤頁，只印開頭方便判斷
+      console.error('[loadData] 非 JSON 回應:', rawText.slice(0, 300));
+      throw new Error('JSON 解析失敗: ' + e.message);
+    }
+    if (!Array.isArray(records)) throw new Error('回應不是陣列');
 
     // 正規化所有記錄，供每月視圖查詢
     allRecords = records.map(r => ({
-      date:       r.date,
+      date:       normalizeDate(r.date),
       habit:      r.habit,
       done:       r.done       === true || r.done       === 'TRUE',
       backfilled: r.backfilled === true || r.backfilled === 'TRUE',
@@ -788,9 +799,6 @@ async function loadData() {
         if (backfilled) backfilledDates[habit].add(date);
       }
     }
-
-    HABIT_KEYS.forEach(k =>
-      console.log(`[loadData] ${HABIT_CONFIG[k].name}:`, [...habitData[k]]));
 
     renderAll();
   } catch (err) {
@@ -825,6 +833,7 @@ function getBackfillState(key) {
 //  API — POST 補打切換
 // ═══════════════════════════════════════════════
 async function toggleBackfill(key) {
+  if (blockIfDayChanged()) return;
   const yKey  = yesterdayKey();
   const state = getBackfillState(key);
   if (state === 'already-done' || sendingBackfill[key]) return;
@@ -846,13 +855,7 @@ async function toggleBackfill(key) {
   renderAll();
 
   try {
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: yKey, habit: key, done: newDone, backfilled: newDone, type: 'daily' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await saveCheckin(yKey, key, newDone, newDone, 'daily');
     const c = HABIT_CONFIG[key];
     showToast(newDone ? `✓ ${c.name} 補打成功！` : `${c.name} 補打已取消`);
   } catch (err) {
@@ -877,8 +880,9 @@ async function toggleBackfill(key) {
 //  API — POST 打卡切換
 // ═══════════════════════════════════════════════
 async function toggleCheckIn(key) {
-  const todayKey = dateKey(today);
   if (sending[key]) return;
+  if (blockIfDayChanged()) return;
+  const todayKey = dateKey(today);
 
   const wasDone = habitData[key].has(todayKey);
   sending[key] = true;
@@ -892,13 +896,7 @@ async function toggleCheckIn(key) {
   renderTodayButtons();
 
   try {
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: todayKey, habit: key, done: !wasDone, backfilled: false, type: 'daily' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await saveCheckin(todayKey, key, !wasDone, false, 'daily');
     const c = HABIT_CONFIG[key];
     showToast(wasDone ? `${c.name} 打卡已取消` : `✓ ${c.name} 打卡成功！`);
   } catch (err) {
@@ -1128,12 +1126,13 @@ function changeCalMonth(dir) {
 // ═══════════════════════════════════════════════
 function getTodayString() { return dateKey(today); }
 
-async function saveCheckin(date, habit, done, backfilled = false, type = 'daily') {
+// extra：額外欄位，例如每月「更新」用的 { allowDuplicate: true }
+async function saveCheckin(date, habit, done, backfilled = false, type = 'daily', extra = {}) {
   const res = await fetch(API_URL, {
     method:   'POST',
     redirect: 'follow',
     headers:  { 'Content-Type': 'text/plain' },
-    body:     JSON.stringify({ date, habit, done, backfilled, type }),
+    body:     JSON.stringify({ date, habit, done, backfilled, type, ...extra }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res;
@@ -1166,7 +1165,7 @@ function changeMonth(delta) {
 }
 
 function getMonthKey(offset) {
-  const d = new Date();
+  const d = new Date(today);
   d.setDate(1);
   d.setMonth(d.getMonth() + offset);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -1181,12 +1180,13 @@ function renderMonthlyView() {
   const [y, m]         = key.split('-');
   document.getElementById('monthly-label').textContent = y + ' 年 ' + parseInt(m) + ' 月';
 
-  // 同一項目本月可有多筆完成紀錄，全部收集（同日去重後排序）
+  // 同一項目本月可有多筆完成紀錄，全部收集（同日合併成一行並記次數）
   const monthlyDates = {};
   allRecords
     .filter(r => r.type === 'monthly' && r.date.startsWith(key) && r.done === true)
     .forEach(r => {
-      (monthlyDates[r.habit] = monthlyDates[r.habit] || new Set()).add(r.date);
+      const m = monthlyDates[r.habit] = monthlyDates[r.habit] || new Map();
+      m.set(r.date, (m.get(r.date) || 0) + 1);
     });
 
   let html = '';
@@ -1194,12 +1194,13 @@ function renderMonthlyView() {
     html += '<div class="group-section-label">' + group.name + '</div>';
     group.items.forEach(itemKey => {
       const item   = MONTHLY_CONFIG[itemKey];
-      const dates  = [...(monthlyDates[itemKey] || [])].sort();
+      const dates  = [...(monthlyDates[itemKey] || [])].sort((a, b) => a[0].localeCompare(b[0]));
       const isDone = dates.length > 0;
+      const busy   = sendingMonthly.has(itemKey);
       const dateDisplay = isDone
-        ? dates.map(d => {
+        ? dates.map(([d, n]) => {
             const p = d.split('-');
-            return parseInt(p[1]) + ' 月 ' + parseInt(p[2]) + ' 日完成';
+            return parseInt(p[1]) + ' 月 ' + parseInt(p[2]) + ' 日完成' + (n > 1 ? ' ×' + n : '');
           }).join('<br>')
         : '本月尚未完成';
 
@@ -1214,11 +1215,11 @@ function renderMonthlyView() {
         if (isDone) {
           html += '<div class="btn-group">';
           html += '<button class="btn done" style="background:' + item.empty + ';color:' + item.textColor + '">✓ 完成</button>';
-          html += '<button class="btn" onclick="updateMonthly(\'' + itemKey + '\')">更新</button>';
+          html += '<button class="btn' + (busy ? ' sending' : '') + '" onclick="updateMonthly(\'' + itemKey + '\')">' + (busy ? '送出中…' : '更新') + '</button>';
           html += '</div>';
         } else {
           html += '<div class="btn-group">';
-          html += '<button class="btn" onclick="checkinMonthly(\'' + itemKey + '\')">打卡</button>';
+          html += '<button class="btn' + (busy ? ' sending' : '') + '" onclick="checkinMonthly(\'' + itemKey + '\')">' + (busy ? '送出中…' : '打卡') + '</button>';
           html += '<button class="btn disabled" style="pointer-events:none;opacity:0.4;">更新</button>';
           html += '</div>';
         }
@@ -1231,46 +1232,39 @@ function renderMonthlyView() {
   el.innerHTML = html;
 }
 
-async function checkinMonthly(habitKey) {
+// 每月寫入共用流程：每項一把鎖，送出期間按鈕顯示「送出中…」，擋掉連點造成的重複紀錄
+const sendingMonthly = new Set();
+
+async function postMonthly(habitKey, done, extra, okMsg, failLabel) {
+  if (sendingMonthly.has(habitKey)) return;
+  if (blockIfDayChanged()) return;
+  sendingMonthly.add(habitKey);
+  renderMonthlyView();
   try {
-    await saveCheckin(getTodayString(), habitKey, true, false, 'monthly');
-    showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 完成！');
+    await saveCheckin(getTodayString(), habitKey, done, false, 'monthly', extra);
+    showToast(okMsg);
     await loadDataAndRender();
-    renderMonthlyView();
   } catch (err) {
-    console.error('每月打卡失敗', err);
+    console.error(failLabel, err);
     showToast('⚠️ 操作失敗，請再試一次', true);
+  } finally {
+    sendingMonthly.delete(habitKey);
+    renderMonthlyView();
   }
 }
 
-async function updateMonthly(habitKey) {
-  try {
-    const res = await fetch(API_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({ date: getTodayString(), habit: habitKey, done: true, backfilled: false, type: 'monthly', allowDuplicate: true }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    showToast('✓ ' + MONTHLY_CONFIG[habitKey].name + ' 已更新');
-    await loadDataAndRender();
-    renderMonthlyView();
-  } catch (err) {
-    console.error('每月更新失敗', err);
-    showToast('⚠️ 操作失敗，請再試一次', true);
-  }
+function checkinMonthly(habitKey) {
+  return postMonthly(habitKey, true, {}, '✓ ' + MONTHLY_CONFIG[habitKey].name + ' 完成！', '每月打卡失敗');
 }
 
-async function cancelMonthly(habitKey) {
-  try {
-    await saveCheckin(getTodayString(), habitKey, false, false, 'monthly');
-    showToast(MONTHLY_CONFIG[habitKey].name + ' 已取消');
-    await loadDataAndRender();
-    renderMonthlyView();
-  } catch (err) {
-    console.error('取消失敗', err);
-    showToast('⚠️ 操作失敗，請再試一次', true);
-  }
+// allowDuplicate：後端預設 upsert，要帶這個才會新增一列
+function updateMonthly(habitKey) {
+  return postMonthly(habitKey, true, { allowDuplicate: true }, '✓ ' + MONTHLY_CONFIG[habitKey].name + ' 已更新', '每月更新失敗');
+}
+
+// 目前畫面沒有呼叫處；renderMonthlyView 也只看 done===true，要恢復取消功能得一併改讀取邏輯
+function cancelMonthly(habitKey) {
+  return postMonthly(habitKey, false, {}, MONTHLY_CONFIG[habitKey].name + ' 已取消', '取消失敗');
 }
 
 // ═══════════════════════════════════════════════
@@ -1279,6 +1273,12 @@ async function cancelMonthly(habitKey) {
 buildStaticHTML();
 renderHeader();
 loadData();
+
+// 頁面開著跨午夜：回到前景或每分鐘檢查一次，換日就重新載入
+function onMaybeNewDay() { if (syncToday()) loadData(); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) onMaybeNewDay(); });
+window.addEventListener('focus', onMaybeNewDay);
+setInterval(onMaybeNewDay, 60 * 1000);
 </script>
 </body>
 </html>
