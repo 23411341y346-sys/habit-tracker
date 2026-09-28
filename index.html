@@ -1196,6 +1196,9 @@ function renderMonthlyView() {
       const item   = MONTHLY_CONFIG[itemKey];
       const dates  = [...(monthlyDates[itemKey] || [])].sort((a, b) => a[0].localeCompare(b[0]));
       const isDone = dates.length > 0;
+      // 總筆數：dates 是依日期分組（同一天按多次更新算一組、次數記在 n），
+      // 只有「總共剛好 1 筆」才能安全取消，光看 dates.length===1 會漏掉同一天按過更新的情況
+      const totalCount = dates.reduce((sum, [, n]) => sum + n, 0);
       const busy   = sendingMonthly.has(itemKey);
       const dateDisplay = isDone
         ? dates.map(([d, n]) => {
@@ -1216,6 +1219,10 @@ function renderMonthlyView() {
           html += '<div class="btn-group">';
           html += '<button class="btn done" style="background:' + item.empty + ';color:' + item.textColor + '">✓ 完成</button>';
           html += '<button class="btn' + (busy ? ' sending' : '') + '" onclick="updateMonthly(\'' + itemKey + '\')">' + (busy ? '送出中…' : '更新') + '</button>';
+          // 本月總共只有一筆完成時才能取消；已按過「更新」變多筆後，取消要消哪一筆語意不明，不提供
+          if (totalCount === 1) {
+            html += '<button class="btn' + (busy ? ' sending' : '') + '" onclick="cancelMonthly(\'' + itemKey + '\',\'' + dates[0][0] + '\')">' + (busy ? '送出中…' : '取消') + '</button>';
+          }
           html += '</div>';
         } else {
           html += '<div class="btn-group">';
@@ -1235,13 +1242,13 @@ function renderMonthlyView() {
 // 每月寫入共用流程：每項一把鎖，送出期間按鈕顯示「送出中…」，擋掉連點造成的重複紀錄
 const sendingMonthly = new Set();
 
-async function postMonthly(habitKey, done, extra, okMsg, failLabel) {
+async function postMonthly(habitKey, done, extra, okMsg, failLabel, date = null) {
   if (sendingMonthly.has(habitKey)) return;
   if (blockIfDayChanged()) return;
   sendingMonthly.add(habitKey);
   renderMonthlyView();
   try {
-    await saveCheckin(getTodayString(), habitKey, done, false, 'monthly', extra);
+    await saveCheckin(date || getTodayString(), habitKey, done, false, 'monthly', extra);
     showToast(okMsg);
     await loadDataAndRender();
   } catch (err) {
@@ -1262,9 +1269,9 @@ function updateMonthly(habitKey) {
   return postMonthly(habitKey, true, { allowDuplicate: true }, '✓ ' + MONTHLY_CONFIG[habitKey].name + ' 已更新', '每月更新失敗');
 }
 
-// 目前畫面沒有呼叫處；renderMonthlyView 也只看 done===true，要恢復取消功能得一併改讀取邏輯
-function cancelMonthly(habitKey) {
-  return postMonthly(habitKey, false, {}, MONTHLY_CONFIG[habitKey].name + ' 已取消', '取消失敗');
+// 取消本月「唯一一筆」完成紀錄：對那一筆實際的日期送 done:false，upsert 命中同一列覆寫
+function cancelMonthly(habitKey, date) {
+  return postMonthly(habitKey, false, {}, MONTHLY_CONFIG[habitKey].name + ' 已取消', '取消失敗', date);
 }
 
 // ═══════════════════════════════════════════════
