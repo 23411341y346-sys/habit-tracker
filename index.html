@@ -336,6 +336,8 @@
       transition: opacity .3s;
     }
     .loading-mask.hidden { opacity: 0; pointer-events: none; }
+    .loading-mask { flex-direction: column; gap: 12px; }
+    .loading-text { font-size: 0.8rem; color: var(--sub); min-height: 1.2em; }
     .spinner {
       width: 36px; height: 36px;
       border: 3px solid var(--border);
@@ -499,6 +501,7 @@
 
 <div class="loading-mask" id="loading-mask">
   <div class="spinner"></div>
+  <div class="loading-text" id="loading-text"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -756,21 +759,47 @@ function setupSwipe(wrapEl, pagerEl, dots) {
 // ═══════════════════════════════════════════════
 //  API — GET 讀取歷史資料
 // ═══════════════════════════════════════════════
-async function loadData() {
-  setLoading(true);
-  try {
-    const res = await fetch(API_URL, { redirect: 'follow' });
-    const rawText = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const FETCH_TIMEOUT_MS = 25000;
+const LOAD_RETRIES     = 3;
 
-    let records;
-    try   { records = JSON.parse(rawText); }
-    catch (e) {
-      // 非 JSON 多半是 Apps Script 的錯誤頁，只印開頭方便判斷
-      console.error('[loadData] 非 JSON 回應:', rawText.slice(0, 300));
-      throw new Error('JSON 解析失敗: ' + e.message);
+// 帶逾時的 fetch：Apps Script 偶爾 30～40 秒才回、或直接回 404，不能無限等
+async function fetchWithTimeout(url, opts = {}, ms = FETCH_TIMEOUT_MS) {
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctrl.signal }); }
+  finally { clearTimeout(timer); }
+}
+const isTimeout = err => !!err && err.name === 'AbortError';
+
+// 讀一次全部紀錄；失敗就丟例外，由 loadData 決定重試
+async function fetchRecordsOnce_() {
+  const res = await fetchWithTimeout(API_URL, { redirect: 'follow' });
+  const rawText = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let records;
+  try   { records = JSON.parse(rawText); }
+  catch (e) {
+    // 非 JSON 多半是 Apps Script 的錯誤頁，只印開頭方便判斷
+    console.error('[loadData] 非 JSON 回應:', rawText.slice(0, 300));
+    throw new Error('JSON 解析失敗: ' + e.message);
+  }
+  if (!Array.isArray(records)) throw new Error('回應不是陣列');
+  return records;
+}
+
+async function loadData() {
+  setLoading(true, '讀取中…');
+  try {
+    let records = null;
+    for (let attempt = 1; attempt <= LOAD_RETRIES; attempt++) {
+      try { records = await fetchRecordsOnce_(); break; }
+      catch (err) {
+        console.error(`[loadData] 第 ${attempt} 次失敗:`, isTimeout(err) ? '逾時' : err.message);
+        if (attempt === LOAD_RETRIES) throw err;
+        setLoading(true, `後端沒回應，重試第 ${attempt + 1} 次…`);
+        await new Promise(r => setTimeout(r, 1500 * attempt));
+      }
     }
-    if (!Array.isArray(records)) throw new Error('回應不是陣列');
 
     // 正規化所有記錄，供每月視圖查詢
     allRecords = records.map(r => ({
@@ -802,8 +831,8 @@ async function loadData() {
 
     renderAll();
   } catch (err) {
-    console.error('[loadData] 失敗:', err);
-    showToast('⚠️ 載入資料失敗，請重新整理', true);
+    console.error('[loadData] 重試後仍失敗:', err);
+    showToast('⚠️ 連不上後端，請稍後重新整理', true);
     renderAll();
   } finally {
     setLoading(false);
@@ -860,15 +889,21 @@ async function toggleBackfill(key) {
     showToast(newDone ? `✓ ${c.name} 補打成功！` : `${c.name} 補打已取消`);
   } catch (err) {
     console.error('補打失敗', err);
-    // 回滾
-    if (newDone) {
-      habitData[key].delete(yKey);
-      backfilledDates[key].delete(yKey);
+    if (isTimeout(err)) {
+      // 逾時時後端可能已經寫進去只是沒回應：不盲目回滾，重新讀取對帳
+      showToast('⚠️ 後端沒回應，重新讀取中…', true);
+      await loadData();
     } else {
-      habitData[key].add(yKey);
-      backfilledDates[key].add(yKey);
+      // 回滾
+      if (newDone) {
+        habitData[key].delete(yKey);
+        backfilledDates[key].delete(yKey);
+      } else {
+        habitData[key].add(yKey);
+        backfilledDates[key].add(yKey);
+      }
+      showToast('⚠️ 操作失敗，請再試一次', true);
     }
-    showToast('⚠️ 操作失敗，請再試一次', true);
   } finally {
     sendingBackfill[key] = false;
     if (btn) btn.classList.remove('sending');
@@ -901,10 +936,16 @@ async function toggleCheckIn(key) {
     showToast(wasDone ? `${c.name} 打卡已取消` : `✓ ${c.name} 打卡成功！`);
   } catch (err) {
     console.error('打卡失敗', err);
-    // 回滾
-    if (wasDone) habitData[key].add(todayKey);
-    else         habitData[key].delete(todayKey);
-    showToast('⚠️ 操作失敗，請再試一次', true);
+    if (isTimeout(err)) {
+      // 逾時時後端可能已經寫進去只是沒回應：不盲目回滾，重新讀取對帳
+      showToast('⚠️ 後端沒回應，重新讀取中…', true);
+      await loadData();
+    } else {
+      // 回滾
+      if (wasDone) habitData[key].add(todayKey);
+      else         habitData[key].delete(todayKey);
+      showToast('⚠️ 操作失敗，請再試一次', true);
+    }
   } finally {
     sending[key] = false;
     btn.classList.remove('sending');
@@ -915,8 +956,9 @@ async function toggleCheckIn(key) {
 // ═══════════════════════════════════════════════
 //  LOADING / TOAST
 // ═══════════════════════════════════════════════
-function setLoading(on) {
+function setLoading(on, text = '') {
   document.getElementById('loading-mask').classList.toggle('hidden', !on);
+  document.getElementById('loading-text').textContent = on ? text : '';
 }
 
 let toastTimer;
@@ -1128,7 +1170,7 @@ function getTodayString() { return dateKey(today); }
 
 // extra：額外欄位，例如每月「更新」用的 { allowDuplicate: true }
 async function saveCheckin(date, habit, done, backfilled = false, type = 'daily', extra = {}) {
-  const res = await fetch(API_URL, {
+  const res = await fetchWithTimeout(API_URL, {
     method:   'POST',
     redirect: 'follow',
     headers:  { 'Content-Type': 'text/plain' },
@@ -1253,7 +1295,12 @@ async function postMonthly(habitKey, done, extra, okMsg, failLabel, date = null)
     await loadDataAndRender();
   } catch (err) {
     console.error(failLabel, err);
-    showToast('⚠️ 操作失敗，請再試一次', true);
+    if (isTimeout(err)) {
+      showToast('⚠️ 後端沒回應，重新讀取中…', true);
+      await loadDataAndRender();
+    } else {
+      showToast('⚠️ 操作失敗，請再試一次', true);
+    }
   } finally {
     sendingMonthly.delete(habitKey);
     renderMonthlyView();
